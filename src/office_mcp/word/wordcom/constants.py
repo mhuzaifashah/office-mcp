@@ -184,8 +184,8 @@ class WdWrapType(IntEnum):
     SQUARE = 0
     TIGHT = 1
     THROUGH = 2
-    TOP_BOTTOM = 3
-    FRONT = 4
+    FRONT = 3  # wdWrapFront (same value as wdWrapNone)
+    TOP_BOTTOM = 4
     BEHIND = 5
     INLINE = 7
 
@@ -569,11 +569,11 @@ class WdPaperSize(IntEnum):
     """
 
     LETTER = 2
-    TABLOID = 3
+    TABLOID = 23
     LEGAL = 4
     A3 = 6
     A4 = 7
-    A5 = 8
+    A5 = 9
 
 
 class WdReferenceType(IntEnum):
@@ -705,7 +705,7 @@ class WdFieldType(IntEnum):
     DATE = 31
     TIME = 32
     PAGE = 33
-    TITLE = 49
+    TITLE = 15
     TOA = 73  # table of authorities (the field the table itself renders as)
     TOA_ENTRY = 74  # a TA mark — one entry feeding the table of authorities
     CITATION = 96
@@ -767,7 +767,7 @@ class XlChartType(IntEnum):
     COLUMN_CLUSTERED = 51
     LINE = 4
     PIE = 5
-    XY_SCATTER_MARKERS = 65
+    XY_SCATTER_MARKERS = -4169  # xlXYScatter
 
 
 class XlLegendPosition(IntEnum):
@@ -867,7 +867,7 @@ class XlErrorBarInclude(IntEnum):
     BOTH = 1
     PLUS_VALUES = 2
     MINUS_VALUES = 3
-    NONE = 4
+    NONE = -4142
 
 
 class XlErrorBarType(IntEnum):
@@ -880,6 +880,6 @@ class XlErrorBarType(IntEnum):
 
     FIXED_VALUE = 1
     PERCENT = 2
-    STANDARD_DEVIATION = 3
+    STANDARD_DEVIATION = -4155
     STANDARD_ERROR = 4
     CUSTOM = -4114
