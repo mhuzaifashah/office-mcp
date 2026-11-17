@@ -5168,7 +5168,14 @@ class Heading(Anchor):
         with _com.translate_com_errors():
             span = self.section_range()
             doc_com = self._doc.com
-            doc_com.Range(int(span.Start), int(span.End)).Delete()
+            start = int(span.Start)
+            # Word's final paragraph mark can't be deleted; a range reaching
+            # Content.End raises 0x80020009, so stop one short of it.
+            end = min(int(span.End), int(doc_com.Content.End) - 1)
+            # Range.Delete() on a zero-width range removes the next character,
+            # so an empty section must skip the delete entirely.
+            if end > start:
+                doc_com.Range(start, end).Delete()
         if markdown:
             if not isinstance(body, str):
                 raise OpError("replace_section_body with markdown=True requires a string body")
