@@ -575,18 +575,17 @@ def _table_block(doc: Document, index: int, image_by_start: dict[int, tuple[int,
         # any inline-image refs whose start falls inside the cell's range.
         tcom = table.com
         for r in range(1, len(grid) + 1):
-            cells = tcom.Rows(r).Cells
-            for c in range(1, len(grid[r - 1]) + 1):
+            for pos_in_row, c in enumerate(table._row_columns(r)):
                 try:
-                    rng = cells.Item(c).Range
+                    rng = tcom.Cell(r, c).Range
                     cs, ce = int(rng.Start), int(rng.End)
                 except Exception:
                     continue
                 refs = [f"![{alt}](image:{idx})" for pos, (idx, alt) in images if cs <= pos < ce]
                 if refs:
-                    cur = grid[r - 1][c - 1]
+                    cur = grid[r - 1][pos_in_row]
                     joined = " ".join(refs)
-                    grid[r - 1][c - 1] = f"{cur} {joined}".strip() if cur else joined
+                    grid[r - 1][pos_in_row] = f"{cur} {joined}".strip() if cur else joined
     header = tuple(grid[0]) if grid else ()
     rows = tuple(tuple(r) for r in grid[1:])
     alignments: list[str | None] = []

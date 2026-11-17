@@ -392,10 +392,15 @@ class Table:
         """
         with _com.translate_com_errors():
             cols = int(self._com.Columns.Count)
-            return all(
-                int(self._com.Rows(r).Cells.Count) == cols
-                for r in range(1, int(self._com.Rows.Count) + 1)
-            )
+            try:
+                return all(
+                    int(self._com.Rows(r).Cells.Count) == cols
+                    for r in range(1, int(self._com.Rows.Count) + 1)
+                )
+            except Exception:  # noqa: BLE001
+                # Rows(r) raises on a vertically merged table, which is by
+                # definition not uniform.
+                return False
 
     def cell(self, row: int, col: int) -> Cell:
         """Return the `Cell` at 1-based (row, col).
@@ -435,10 +440,28 @@ class Table:
             raise AnchorNotFoundError("table column", f"table:{self._index}:col:{col}")
         return ColumnAnchor(self, col)
 
+    def _row_columns(self, row: int) -> list[int]:
+        """1-based column indices of the *physical* cells in a 1-based row.
+
+        Normally `1..Rows(row).Cells.Count` (a horizontally merged row is just
+        shorter). Word refuses `Rows(row)` on a table with vertically merged
+        cells (error 5991), so in that case the indices come from walking
+        `Range.Cells`, where a cell covered by a vertical merge is absent.
+        """
+        try:
+            count = int(self._com.Rows(row).Cells.Count)
+        except Exception:  # noqa: BLE001
+            with _com.translate_com_errors():
+                return sorted(
+                    int(cell.ColumnIndex)
+                    for cell in self._com.Range.Cells
+                    if int(cell.RowIndex) == row
+                )
+        return list(range(1, count + 1))
+
     def _row_cell_count(self, row: int) -> int:
         """The number of *physical* cells in a 1-based row (a merged row is shorter)."""
-        with _com.translate_com_errors():
-            return int(self._com.Rows(row).Cells.Count)
+        return len(self._row_columns(row))
 
     def grid(self) -> list[list[str]]:
         """All cell text as a row-major `list[list[str]]`.
@@ -448,7 +471,7 @@ class Table:
         table it's the plain `row_count` × `column_count` grid.
         """
         return [
-            [Cell(self, r, c).text for c in range(1, self._row_cell_count(r) + 1)]
+            [Cell(self, r, c).text for c in self._row_columns(r)]
             for r in range(1, self.row_count + 1)
         ]
 
@@ -469,7 +492,7 @@ class Table:
                     "text": Cell(self, r, c).text,
                     "anchor_id": f"table:{self._index}:{r}:{c}",
                 }
-                for c in range(1, self._row_cell_count(r) + 1)
+                for c in self._row_columns(r)
             ]
             for r in range(1, rows + 1)
         ]
