@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Enforce Conventional Commits on the subject line: type(scope): subject
+subject=$(head -n1 "$1")
+case "$subject" in Merge*|Revert*) exit 0 ;; esac
+echo "$subject" | grep -qE '^(feat|fix|refactor|perf|test|docs|style|build|ci|chore|revert)(\([a-z0-9._-]+\))?!?: .+' && exit 0
+echo "commit-msg: use Conventional Commits, e.g. 'fix(word): correct WdWrapType values'" >&2
+exit 1

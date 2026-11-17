@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Dev-only agent notes (not published)
+CLAUDE.md
+memory/
+
+# Local-only hook config
+.private-terms
+
+# Claude Code local config
+.claude/

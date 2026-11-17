@@ -1,0 +1,317 @@
+"""Linter + regularizer — `doc.lint()` / `doc.regularize()`.
+
+Detection runs over `fake_word` (whose ranges now carry real Font / Paragraph-
+Format and an applied ParagraphStyle baseline). The structural `table-repeat-
+header` rule needs real page geometry, so its multi-page case is smoke-only here
+(the unit test asserts no false positive on the single-page fixture table); the
+others round-trip in the fake.
+"""
+
+from __future__ import annotations
+
+import wordcom
+from wordcom import _com
+
+
+def _attach(monkeypatch, app):
+    monkeypatch.setattr(_com, "get_active_word", lambda: app)
+    monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
+
+
+def _make_app(**kwargs):
+    from tests.word.conftest import _make_application, _make_document
+
+    return _make_application([_make_document(**kwargs)])
+
+
+def _rules_seen(findings):
+    return {f["rule"] for f in findings}
+
+
+# --- structural: heading-keep-with-next -------------------------------------
+
+
+def test_lint_flags_headings_without_keep_with_next(fake_word):
+    # fake_word's headings (Introduction, Risks) default to KeepWithNext off.
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["heading-keep-with-next"])
+    assert {f["anchor_id"] for f in findings} == {"heading:1", "heading:3"}
+    assert all(f["fixable"] and f["kind"] == "structural" for f in findings)
+    assert findings[0]["fix"]["op"] == "format_paragraph"
+    assert findings[0]["fix"]["keep_with_next"] is True
+
+
+def test_regularize_fixes_keep_with_next_and_is_idempotent(fake_word):
+    with wordcom.attach() as word:
+        doc = word.documents.active
+        first = doc.regularize(rules=["heading-keep-with-next"])
+        assert len(first["applied"]) == 2
+        # The fix actually landed: re-lint is clean and a second pass is a no-op.
+        assert doc.lint(rules=["heading-keep-with-next"]) == []
+        second = doc.regularize(rules=["heading-keep-with-next"])
+    assert second["applied"] == []
+
+
+def test_regularize_dry_run_writes_nothing(fake_word):
+    with wordcom.attach() as word:
+        doc = word.documents.active
+        report = doc.regularize(rules=["heading-keep-with-next"], dry_run=True)
+        assert report["dry_run"] is True
+        assert report["applied"] == []
+        # Still flagged afterwards — nothing was applied.
+        assert len(doc.lint(rules=["heading-keep-with-next"])) == 2
+
+
+# --- structural: list-numbering-continuity ----------------------------------
+
+
+def test_lint_flags_split_numbered_lists(monkeypatch):
+    # Two abutting numbered lists (end of A == start of B) = one list Word split.
+    app = _make_app(lists=[{"start": 0, "end": 10, "type": 3}, {"start": 10, "end": 20, "type": 3}])
+    _attach(monkeypatch, app)
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["list-numbering-continuity"])
+    assert len(findings) == 1
+    f = findings[0]
+    assert f["anchor_id"] == "range:0-20"
+    assert [op["op"] for op in f["fix"]] == ["remove_list", "apply_list"]
+
+
+def test_lint_flags_split_number_only_lists(monkeypatch):
+    # number-only (WdListType.LIST_NUM_ONLY = 1) and mixed (5) numbered lists
+    # suffer the same split footgun and must be flagged, not just simple/outline.
+    app = _make_app(lists=[{"start": 0, "end": 10, "type": 1}, {"start": 10, "end": 20, "type": 5}])
+    _attach(monkeypatch, app)
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["list-numbering-continuity"])
+    assert len(findings) == 1
+    assert findings[0]["anchor_id"] == "range:0-20"
+
+
+def test_lint_ignores_separated_numbered_lists(monkeypatch):
+    # A gap between the two lists -> intentionally separate, not a split.
+    app = _make_app(lists=[{"start": 0, "end": 10, "type": 3}, {"start": 15, "end": 25, "type": 3}])
+    _attach(monkeypatch, app)
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["list-numbering-continuity"])
+    assert findings == []
+
+
+# --- structural: table-repeat-header (no false positive on single-page) ------
+
+
+def test_lint_single_page_table_not_flagged(fake_word):
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["table-repeat-header"])
+    assert findings == []
+
+
+# --- consistency: heading-font-consistent + idempotent targeted fix ----------
+
+
+def test_lint_flags_heading_font_size_override(fake_word):
+    # Bump heading:1's effective size above its style baseline (12pt).
+    fake_word.ActiveDocument.Paragraphs._items[0].Range.Font.Size = 15.0
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["heading-font-consistent"])
+    assert len(findings) == 1
+    f = findings[0]
+    # Consistency rules walk paragraphs, so a heading is addressed as para:N (the
+    # same index space as heading:N — both resolve to the paragraph).
+    assert f["anchor_id"] == "para:1"
+    assert f["kind"] == "consistency"
+    assert f["fix"] == {"op": "format_run", "anchor_id": "para:1", "size": 12.0}
+
+
+def test_regularize_heading_font_targeted_fix_is_idempotent(fake_word):
+    fake_word.ActiveDocument.Paragraphs._items[0].Range.Font.Size = 15.0
+    with wordcom.attach() as word:
+        doc = word.documents.active
+        first = doc.regularize(rules=["heading-font-consistent"])
+        assert len(first["applied"]) == 1
+        assert doc.lint(rules=["heading-font-consistent"]) == []
+        second = doc.regularize(rules=["heading-font-consistent"])
+    assert second["applied"] == []
+
+
+def test_regularize_attaches_run_batch_failure_detail(fake_word, monkeypatch):
+    # When a fix op fails, run_batch's structured failure detail must ride on the
+    # raised error rather than being dropped (so the caller sees which fix failed).
+    import pytest
+    import wordcom._ops as ops_mod
+    from wordcom.exceptions import OpError
+
+    failure = {"index": 0, "op": {"op": "format_run"}, "error": "boom", "type": "OpError"}
+
+    def fake_run_batch(doc, ops, *, label, tracked=False):
+        return {"ok": False, "ops_run": 0, "label": label, "failure": failure}, OpError("boom")
+
+    monkeypatch.setattr(ops_mod, "run_batch", fake_run_batch)
+    fake_word.ActiveDocument.Paragraphs._items[0].Range.Font.Size = 15.0
+    with wordcom.attach() as word:
+        with pytest.raises(OpError) as ei:
+            word.documents.active.regularize(rules=["heading-font-consistent"])
+    assert getattr(ei.value, "failure", None) == failure
+    assert getattr(ei.value, "ops_run", None) == 0
+
+
+# --- consistency: mixed-run-format is report-only ----------------------------
+
+
+def test_lint_mixed_run_heading_is_report_only(fake_word):
+    from wordcom.constants import WD_UNDEFINED
+
+    fake_word.ActiveDocument.Paragraphs._items[0].Range.Font.Size = WD_UNDEFINED
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["mixed-run-format"])
+    assert len(findings) == 1
+    assert findings[0]["fixable"] is False
+    assert findings[0]["fix"] is None
+
+
+# --- rule selection ----------------------------------------------------------
+
+
+def test_lint_default_runs_consistency_and_structural(fake_word):
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint()
+    # The default set includes the keep-with-next structural rule; policy rules
+    # (none yet) would stay off.
+    assert "heading-keep-with-next" in _rules_seen(findings)
+
+
+def test_lint_rules_exclude(fake_word):
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules={"exclude": ["heading-keep-with-next"]})
+    assert "heading-keep-with-next" not in _rules_seen(findings)
+
+
+def test_lint_within_scopes_to_anchor(fake_word):
+    # Scope to heading:3 (Risks, offsets 29-35); heading:1 falls outside.
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["heading-keep-with-next"], within="heading:3")
+    assert {f["anchor_id"] for f in findings} == {"heading:3"}
+
+
+def test_lint_within_scopes_consistency_rule(fake_word):
+    # LINT-6: a consistency rule (which uses the unified `_in_span`/`_overlaps`
+    # span test) must also honour `within`. heading:1 has a size override but
+    # falls outside heading:3's span, so it isn't flagged.
+    fake_word.ActiveDocument.Paragraphs._items[0].Range.Font.Size = 15.0
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["heading-font-consistent"], within="heading:3")
+    assert findings == []
+
+
+def test_lint_body_font_consistent_positive(fake_word):
+    # LINT-6: a body paragraph whose font face drifts from its style is flagged,
+    # with a targeted style-value fix.
+    fake_word.ActiveDocument.Paragraphs._items[1].Range.Font.Name = "Comic Sans MS"
+    with wordcom.attach() as word:
+        findings = word.documents.active.lint(rules=["body-font-consistent"])
+    assert len(findings) == 1
+    f = findings[0]
+    assert f["anchor_id"] == "para:2" and f["rule"] == "body-font-consistent"
+    assert f["fix"]["op"] == "format_run" and f["fix"]["font"] == "Aptos"
+
+
+def test_regularize_multiple_rules_ride_one_undo(fake_word):
+    # LINT-6: a multi-rule regularize applies every fix under a single UndoRecord
+    # (one Ctrl-Z reverts the whole pass).
+    fake_word.ActiveDocument.Paragraphs._items[0].Range.Font.Size = 15.0
+    fake_word.UndoRecord.StartCustomRecord.reset_mock()
+    fake_word.UndoRecord.EndCustomRecord.reset_mock()
+    with wordcom.attach() as word:
+        report = word.documents.active.regularize(
+            rules=["heading-keep-with-next", "heading-font-consistent"]
+        )
+    applied_rules = {a["rule"] for a in report["applied"]}
+    assert {"heading-keep-with-next", "heading-font-consistent"} <= applied_rules
+    fake_word.UndoRecord.StartCustomRecord.assert_called_once()
+    fake_word.UndoRecord.EndCustomRecord.assert_called_once()
+
+
+# --- exec op -----------------------------------------------------------------
+
+
+def test_regularize_exec_op_returns_report(fake_word):
+    from wordcom._ops import run_batch
+
+    with wordcom.attach() as word:
+        doc = word.documents.active
+        result, exc = run_batch(
+            doc, [{"op": "regularize", "rules": ["heading-keep-with-next"]}], label="t"
+        )
+    assert exc is None
+    report = result["outputs"][0]
+    assert report["op"] == "regularize"
+    assert len(report["applied"]) == 2
+
+
+# --- CLI ---------------------------------------------------------------------
+
+
+def _invoke(args):
+    from click.testing import CliRunner
+    from wordcom.cli.main import main
+
+    res = CliRunner().invoke(main, args, catch_exceptions=False)
+    return res.exit_code, res.stdout
+
+
+def test_cli_lint_json(fake_word):
+    import json
+
+    code, out = _invoke(["--json", "lint", "--rule", "heading-keep-with-next"])
+    assert code == 0
+    findings = json.loads(out)
+    assert {f["anchor_id"] for f in findings} == {"heading:1", "heading:3"}
+
+
+def test_cli_regularize_dry_run(fake_word):
+    import json
+
+    code, out = _invoke(["--json", "regularize", "--rule", "heading-keep-with-next", "--dry-run"])
+    assert code == 0
+    report = json.loads(out)
+    assert report["dry_run"] is True
+    assert report["applied"] == []
+
+
+def test_cli_read_format(fake_word):
+    import json
+
+    code, out = _invoke(["--json", "read", "format", "--anchor-id", "heading:1"])
+    assert code == 0
+    info = json.loads(out)
+    assert info["anchor_id"] == "heading:1"
+    assert "keep_with_next" in info["paragraph"]
+
+
+# --- MCP ---------------------------------------------------------------------
+
+
+def test_mcp_read_lint_and_format_info(fake_word):
+    import pytest
+
+    pytest.importorskip("mcp")
+    from wordcom._dispatch import _read_impl
+    from wordcom._worker import InlineWorker
+
+    w = InlineWorker()
+    findings = _read_impl(w, "lint", {"rules": ["heading-keep-with-next"]})
+    assert {f["anchor_id"] for f in findings} == {"heading:1", "heading:3"}
+    info = _read_impl(w, "format_info", {"anchor_id": "heading:1"})
+    assert info["style"] == "Normal"
+
+
+def test_mcp_write_regularize(fake_word):
+    import pytest
+
+    pytest.importorskip("mcp")
+    from wordcom._dispatch import _write_impl
+    from wordcom._worker import InlineWorker
+
+    out = _write_impl(InlineWorker(), "regularize", {"rules": ["heading-keep-with-next"]})
+    assert out["ok"] is True
+    assert len(out["result"]["applied"]) == 2
