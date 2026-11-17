@@ -8,21 +8,10 @@ us assert against.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch, validate_op
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError, OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
 
 # --- the Document method -------------------------------------------------------
 
@@ -79,11 +68,3 @@ def test_op_delete_paragraph_requires_anchor_id():
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_delete_paragraph(fake_word):
-    code, out = _invoke(["--json", "delete-paragraph", "--anchor-id", "para:1"])
-    assert code == EXIT_OK
-    payload = json.loads(out)
-    assert payload == {"ok": True, "anchor_id": "para:1", "deleted": True}
-    fake_word.ActiveDocument.Range(0, 13).Delete.assert_called_once()

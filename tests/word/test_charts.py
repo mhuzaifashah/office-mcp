@@ -10,14 +10,10 @@ the ops / CLI / MCP request surfaces.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
-from click.testing import CliRunner
 from wordcom import _charts
 from wordcom._ops import OP_OPTIONAL_FIELDS, OP_REQUIRED_FIELDS, run_batch
-from wordcom.cli.main import main
 from wordcom.exceptions import AnchorNotFoundError, ExcelNotAvailableError, OpError
 
 
@@ -359,59 +355,6 @@ def test_mcp_build_write_op_insert_chart_requires_fields():
 # ---------------------------------------------------------------------------
 
 
-def _invoke(args: list[str], *, input: str | None = None) -> tuple[int, str, str]:
-    runner = CliRunner()
-    result = runner.invoke(main, args, input=input, catch_exceptions=False)
-    return result.exit_code, result.stdout, result.stderr
-
-
-def test_cli_insert_chart(fake_word, monkeypatch):
-    monkeypatch.setattr(_charts, "probe_excel_available", lambda: True)
-    code, out, _ = _invoke(
-        ["insert-chart", "--anchor-id", "end", "--kind", "bar", "--data", '{"Q1": 10, "Q2": 25}']
-    )
-    assert code == 0
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["chart_anchor_id"] == "chart:1"
-    assert data["kind"] == "bar"
-
-
-def test_cli_insert_chart_data_from_stdin(fake_word, monkeypatch):
-    monkeypatch.setattr(_charts, "probe_excel_available", lambda: True)
-    code, out, _ = _invoke(
-        ["insert-chart", "--anchor-id", "end", "--kind", "scatter", "--data", "-"],
-        input="[[1.2, 3.4], [2.5, 6.1]]",
-    )
-    assert code == 0
-    assert json.loads(out)["chart_anchor_id"] == "chart:1"
-
-
-def test_cli_insert_chart_bad_json(fake_word):
-    code, _, err = _invoke(
-        ["insert-chart", "--anchor-id", "end", "--kind", "bar", "--data", "{not json"]
-    )
-    assert code != 0
-    assert "not valid JSON" in err
-
-
-def test_cli_insert_chart_excel_missing_exit_6(fake_word, monkeypatch):
-    from wordcom.cli.main import EXIT_EXCEL_NOT_AVAILABLE
-
-    monkeypatch.setattr(_charts, "probe_excel_available", lambda: False)
-    code, _, err = _invoke(
-        ["insert-chart", "--anchor-id", "end", "--kind", "bar", "--data", '{"a": 1}']
-    )
-    assert code == EXIT_EXCEL_NOT_AVAILABLE
-    assert "Excel" in err
-
-
-def test_cli_charts_list_empty(fake_word):
-    code, out, _ = _invoke(["charts"])
-    assert code == 0
-    assert json.loads(out) == []
-
-
 # ===========================================================================
 # Chart formatting & design — format / set_axis / add_trendline /
 # set_series_color, across the Python API, exec ops, MCP builder, and CLI.
@@ -719,62 +662,6 @@ def test_mcp_build_format_ops_require_fields():
 # --- CLI --------------------------------------------------------------------
 
 
-def test_cli_format_chart(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("bar", {"a": 1})
-    code, out, _ = _invoke(
-        [
-            "format-chart",
-            "--anchor-id",
-            "chart:1",
-            "--chart-style",
-            "240",
-            "--legend",
-            "--title",
-            "Q",
-        ]
-    )
-    assert code == 0
-    data = json.loads(out)
-    assert data["ok"] is True and data["applied"]["chart_style"] == 240
-
-
-def test_cli_format_axis(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("scatter", [[1.0, 2.0]])
-    code, out, _ = _invoke(
-        ["format-axis", "--anchor-id", "chart:1", "--which", "value", "--scale", "log"]
-    )
-    assert code == 0
-    assert json.loads(out)["which"] == "value"
-
-
-def test_cli_add_trendline(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("scatter", [[1.0, 2.0]])
-    code, out, _ = _invoke(
-        ["add-trendline", "--anchor-id", "chart:1", "--kind", "power", "--display-equation"]
-    )
-    assert code == 0
-    assert json.loads(out)["applied"]["kind"] == "power"
-
-
-def test_cli_set_series_color(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("pie", {"a": 1, "b": 2})
-    code, out, _ = _invoke(
-        ["set-series-color", "--anchor-id", "chart:1", "--color", "#2E86C1", "--point", "1"]
-    )
-    assert code == 0
-    assert json.loads(out)["point"] == 1
-
-
-def test_cli_format_chart_rejects_non_chart(fake_word):
-    code, _, err = _invoke(["format-chart", "--anchor-id", "start", "--title", "x"])
-    assert code != 0
-    assert "not a chart" in err
-
-
 # --- PR C: chart depth ------------------------------------------------------
 # format-chart gap/overlap/data-table, format_series, add_error_bars,
 # trendline order/period. Probed live 2026-06-21; the fake mirrors the contract.
@@ -970,31 +857,3 @@ def test_mcp_build_pr_c_ops():
     assert _build_write_op(
         "add_error_bars", {"anchor_id": "chart:1", "kind": "percent", "amount": 5}
     ) == {"op": "add_error_bars", "anchor_id": "chart:1", "kind": "percent", "amount": 5}
-
-
-def test_cli_format_series(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("line", {"a": 1, "b": 2})
-    code, out, _ = _invoke(
-        ["format-series", "--anchor-id", "chart:1", "--marker", "circle", "--marker-size", "8"]
-    )
-    assert code == 0
-    assert json.loads(out)["ok"] is True
-
-
-def test_cli_format_series_needs_an_option(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("line", {"a": 1})
-    code, _, err = _invoke(["format-series", "--anchor-id", "chart:1"])
-    assert code != 0
-    assert "at least one" in err
-
-
-def test_cli_add_error_bars(fake_word, excel_available):
-    with wordcom.attach() as word:
-        word.documents.active.start.insert_chart("bar", {"a": 1, "b": 2})
-    code, out, _ = _invoke(
-        ["add-error-bars", "--anchor-id", "chart:1", "--kind", "percent", "--amount", "5"]
-    )
-    assert code == 0
-    assert json.loads(out)["applied"]["kind"] == "percent"

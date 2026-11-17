@@ -8,21 +8,11 @@ positional arg; EMPTY=-1 is the 2nd).
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdFieldType
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _field_add(fake_word):
@@ -140,29 +130,3 @@ def test_exec_insert_bibliography(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_insert_citation(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "insert-citation",
-            "--anchor-id",
-            "bookmark:Address",
-            "--tag",
-            "Smith2020",
-            "--suppress-author",
-        ]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["citation"] == "Smith2020"
-    assert _field_add(fake_word).call_args.args[2].endswith("\\n")
-
-
-def test_cli_insert_bibliography(fake_word):
-    code, out = _invoke(["--json", "insert-bibliography", "--anchor-id", "bookmark:Address"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert _field_add(fake_word).call_args.args[2] == "BIBLIOGRAPHY"

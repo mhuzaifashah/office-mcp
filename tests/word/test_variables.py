@@ -5,21 +5,10 @@ Round-trips against `fake_word`, seeded with one variable (ClientName=Acme).
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
 
 # --- the reader ----------------------------------------------------------------
 
@@ -84,16 +73,6 @@ def test_op_set_and_delete_variable(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_variables(fake_word):
-    code, out = _invoke(["variables", "list"])
-    assert code == EXIT_OK
-    assert json.loads(out) == {"ClientName": "Acme"}
-    code, out = _invoke(["variables", "set", "--name", "Region", "--value", "EU"])
-    assert code == EXIT_OK and json.loads(out)["ok"]
-    code, out = _invoke(["variables", "delete", "--name", "ClientName"])
-    assert code == EXIT_OK and json.loads(out)["ok"]
 
 
 # --- MCP -----------------------------------------------------------------------

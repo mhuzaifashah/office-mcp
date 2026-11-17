@@ -8,25 +8,17 @@ the smoke tests.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
 import wordcom
-from click.testing import CliRunner
 from wordcom._anchors import RangeAnchor
 from wordcom._dispatch import _write_impl
 from wordcom._ops import run_batch
 from wordcom._worker import InlineWorker
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
 
 W = InlineWorker()
-
-
-def _invoke(args: list[str], *, input: str | None = None) -> tuple[int, str, str]:
-    result = CliRunner().invoke(main, args, input=input, catch_exceptions=False)
-    return result.exit_code, result.stdout, result.stderr
 
 
 # ---------------------------------------------------------------------------
@@ -229,43 +221,6 @@ class TestComposeOps:
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
-
-
-class TestComposeCli:
-    def test_insert_section(self, fake_word: Any) -> None:
-        body = json.dumps(["b1", "b2"])
-        code, out, _ = _invoke(
-            ["insert-section", "--anchor-id", "heading:1", "--heading", "H", "--body", body]
-        )
-        assert code == EXIT_OK
-        assert json.loads(out)["anchor_id"].startswith("range:")
-
-    def test_insert_markdown_from_stdin(self, fake_word: Any) -> None:
-        code, out, _ = _invoke(
-            ["insert-markdown", "--anchor-id", "end", "--markdown", "-"],
-            input="# H\n\n- a\n- b",
-        )
-        assert code == EXIT_OK
-        assert json.loads(out)["ok"] is True
-
-    def test_replace_section_with_markdown(self, fake_word: Any) -> None:
-        code, out, _ = _invoke(
-            ["replace-section", "--anchor-id", "heading:1", "--markdown", "new body"]
-        )
-        assert code == EXIT_OK
-        assert json.loads(out)["anchor_id"].startswith("range:")
-
-    def test_replace_section_both_inputs_is_usage_error(self, fake_word: Any) -> None:
-        code, _, err = _invoke(
-            ["replace-section", "--anchor-id", "heading:1", "--body", "[]", "--markdown", "x"]
-        )
-        assert code != EXIT_OK
-        assert "exactly one" in err
-
-    def test_replace_section_non_heading_is_error(self, fake_word: Any) -> None:
-        code, _, err = _invoke(["replace-section", "--anchor-id", "para:2", "--body", '["x"]'])
-        assert code != EXIT_OK
-        assert "heading" in err
 
 
 # ---------------------------------------------------------------------------

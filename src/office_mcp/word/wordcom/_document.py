@@ -229,8 +229,8 @@ class Document:
         Returns `{"anchor_id": "pin:…", "pin": "pin:…", "target": <resolved id>}`.
         `stamp` is an alias. Wrap in `doc.edit(...)` for atomic undo — but do not
         call it inside an already-open edit scope (custom undo records don't nest;
-        the `exec` batch already owns one). The op is
-        `wordcom pin ANCHOR_ID [--name SLUG]`; the exec op is `pin`.
+        the `exec` batch already owns one). The exec op is `pin`
+        (`anchor_id`, optional `name`).
         """
         resolved = self.anchor_by_id(anchor) if isinstance(anchor, str) else anchor
         target = anchor if isinstance(anchor, str) else resolved.anchor_id
@@ -1180,7 +1180,7 @@ class Document:
 
         `anchor_id` for each match is `range:START-END`, which resolves through
         `anchor_by_id` to a `RangeAnchor` — so a hit can be fed straight back
-        into `replace --anchor-id` or `comments.add`. The offsets are live,
+        into a `replace` op's `anchor_id` or `comments.add`. The offsets are live,
         though, so use them before further edits shift the document.
 
         Matches are located per *segment* (contiguous body text or a single table

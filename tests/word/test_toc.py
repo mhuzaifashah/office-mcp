@@ -8,20 +8,10 @@ and `UseHyperlinks` in particular — are assertable without a real Word.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _toc_add(fake_word):
@@ -113,19 +103,3 @@ def test_exec_insert_toc_bad_levels_fails(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_insert_toc(fake_word):
-    code, out = _invoke(["--json", "insert-toc", "--levels", "1-2", "--no-hyperlinks"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["applied"]["levels"] == [1, 2]
-    assert data["applied"]["hyperlinks"] is False
-    args = _toc_add(fake_word).call_args.args
-    assert args[2] == 1 and args[3] == 2 and args[9] is False
-
-
-def test_cli_insert_toc_bad_levels(fake_word):
-    code, _ = _invoke(["--json", "insert-toc", "--levels", "abc"])
-    assert code != EXIT_OK

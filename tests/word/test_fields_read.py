@@ -7,20 +7,10 @@ sits in the body paragraph (13–29).
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._fields import field_kind
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _make_app(**kwargs):
@@ -89,19 +79,6 @@ def test_index_out_of_range(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_fields(fake_word):
-    code, out = _invoke(["fields"])
-    assert code == EXIT_OK
-    rows = json.loads(out)
-    assert rows[0]["kind"] == "PAGE"
-
-
-def test_cli_fields_text(fake_word):
-    code, out = _invoke(["--text", "fields"])
-    assert code == EXIT_OK
-    assert "PAGE" in out
 
 
 # --- MCP -----------------------------------------------------------------------

@@ -9,19 +9,9 @@ smoke / live-Word concern.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _primary_header_shapes(fake_word):
@@ -73,28 +63,6 @@ def test_set_watermark_bad_layout_raises(fake_word):
             word.documents.active.set_watermark("X", layout="sideways")
 
 
-def test_cli_watermark_set_and_remove(fake_word):
-    code, out = _invoke(["--json", "watermark", "--text", "DRAFT"])
-    assert code == EXIT_OK
-    assert json.loads(out)["sections"] == 1
-
-    code, out = _invoke(["--json", "watermark", "--remove"])
-    assert code == EXIT_OK
-    assert json.loads(out)["removed"] == 1
-
-
-def test_cli_watermark_requires_text_or_remove(fake_word):
-    code, out = _invoke(["watermark"])
-    assert code != EXIT_OK  # neither --text nor --remove
-
-
-def test_exec_set_watermark(fake_word):
-    code, out = _invoke(["--json", "exec", "--ops", '[{"op": "set_watermark", "text": "DRAFT"}]'])
-    assert code == EXIT_OK
-    assert json.loads(out)["ops_run"] == 1
-    assert _primary_header_shapes(fake_word).Count == 1
-
-
 # --- text box -------------------------------------------------------------------
 
 
@@ -112,53 +80,3 @@ def test_insert_text_box_unknown_wrap_raises(fake_word):
     with wordcom.attach() as word:
         with pytest.raises(ValueError):
             word.documents.active.bookmarks["Address"].insert_text_box("x", wrap="inline")
-
-
-def test_cli_insert_text_box(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "insert-text-box",
-            "--anchor-id",
-            "bookmark:Address",
-            "--text",
-            "Sidebar",
-            "--fill",
-            "#eeeeff",
-            "--no-border",
-        ]
-    )
-    assert code == EXIT_OK
-    payload = json.loads(out)
-    assert payload["ok"] is True
-    assert fake_word.ActiveDocument.Shapes.Count == 1
-
-
-def test_cli_insert_text_box_border_conflict(fake_word):
-    code, _ = _invoke(
-        [
-            "insert-text-box",
-            "--anchor-id",
-            "bookmark:Address",
-            "--text",
-            "x",
-            "--no-border",
-            "--border-color",
-            "red",
-        ]
-    )
-    assert code != EXIT_OK
-
-
-def test_exec_insert_text_box(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Quote"}]',
-        ]
-    )
-    assert code == EXIT_OK
-    assert json.loads(out)["ops_run"] == 1
-    assert fake_word.ActiveDocument.Shapes.Count == 1

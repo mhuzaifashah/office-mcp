@@ -9,21 +9,10 @@ inside the body paragraph).
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError, OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
 
 # --- the Anchor methods --------------------------------------------------------
 
@@ -168,22 +157,3 @@ def test_exec_insert_footnote_missing_text_fails(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_insert_footnote(fake_word):
-    code, out = _invoke(
-        ["--json", "insert-footnote", "--anchor-id", "bookmark:Address", "--text", "cli note"]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["note_id"].startswith("footnote:")
-    assert fake_word.ActiveDocument.Footnotes.Add.call_args.args[2] == "cli note"
-
-
-def test_cli_footnotes_list(fake_word):
-    code, out = _invoke(["--json", "footnotes"])
-    assert code == EXIT_OK
-    rows = json.loads(out)
-    assert rows[0]["anchor_id"] == "footnote:1"
-    assert rows[0]["text"] == "A seeded footnote."

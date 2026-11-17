@@ -7,21 +7,10 @@ date") and one custom property (Project=Apollo).
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError, OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
 
 # --- the reader ----------------------------------------------------------------
 
@@ -113,23 +102,6 @@ def test_op_set_and_delete_property(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_properties_list(fake_word):
-    code, out = _invoke(["properties", "list"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["builtin"]["Title"] == "Quarterly Report"
-    assert data["custom"]["Project"] == "Apollo"
-
-
-def test_cli_properties_set_and_delete(fake_word):
-    code, out = _invoke(["properties", "set", "--name", "Author", "--value", "X"])
-    assert code == EXIT_OK and json.loads(out)["ok"]
-    code, out = _invoke(["properties", "set", "--name", "C", "--value", "v", "--custom"])
-    assert code == EXIT_OK and json.loads(out)["custom"] is True
-    code, out = _invoke(["properties", "delete", "--name", "Project"])
-    assert code == EXIT_OK and json.loads(out)["ok"]
 
 
 # --- MCP -----------------------------------------------------------------------

@@ -715,7 +715,7 @@ doc.export_pdf("out/report.pdf")  # a pixel-faithful PDF; from_page/to_page limi
 ```
 
 The Python API is **trusted and ungated** — it writes wherever you point it.
-(The CLI / MCP surfaces gate these behind a `WORDCOM_SAVE_DIRS` whitelist, since
+(The MCP tools gate these behind a `WORDCOM_SAVE_DIRS` whitelist, since
 their input can be prompt-injected.) `export_pdf` is the recommended deliverable
 path — same engine as `snapshot`. `save_as` writes `.docx`; PDF is `export_pdf`.
 
@@ -735,7 +735,7 @@ Catch the base `wl.WordcomError` for everything wordcom raises.
 | `ExcelNotAvailableError` | `insert_chart` but Excel isn't installed (charts are Excel-backed) | no — install Excel |
 | `EquationError` | bad equation input, or the `latex` extra missing for `latex=` | no — fix the input / install `wordcom[latex]` |
 | `OpError` | a malformed or illegal op (e.g. `delete_column` on a merged table) | no — fix the op |
-| `PathNotAllowedError` | a save/image path was refused by the CLI/MCP whitelist (Python API never raises it) | no — configure a save/image dir |
+| `PathNotAllowedError` | a save/image path was refused by the MCP whitelist (Python API never raises it) | no — configure a save/image dir |
 | `SnapshotError` | PyMuPDF missing or PDF rasterise failed | no — install `wordcom[snapshot]` |
 | `WordBusyError` | a modal dialog is open / mid-operation; `.retryable` is True | **yes** — back off and retry |
 | `ComError` | other classified COM error (`.hresult`, `.description`) | generally no |
@@ -761,7 +761,5 @@ def with_retry(fn, attempts=4, base=0.5):
 3. Mutate inside one `with doc.edit("label"):` block (atomic, polite).
 4. Read back to confirm; the user's cursor is untouched.
 
-For the command line instead of Python, the `wordcom` CLI mirrors this model
-(`wordcom outline`, `wordcom replace --anchor-id …`, `wordcom exec`); see the
-`wordcom-cli` skill (`wordcom llm-help`). Full docs:
-the bundled guide (run: word_read command="guide")
+Through MCP instead of Python, the same model is exposed as `read` / `exec` /
+`snapshot` / `write`; that guide is returned by `read("guide")`.

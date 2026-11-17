@@ -12,7 +12,6 @@ from __future__ import annotations
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdCollapseDirection, WdFieldType
 from wordcom.exceptions import OpError
 
@@ -167,32 +166,3 @@ def test_exec_update_fields(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
-
-def test_cli_insert_field(fake_word):
-    import json
-
-    code, out = _invoke(
-        ["--json", "insert-field", "--anchor-id", "bookmark:Address", "--kind", "page"]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["applied"]["kind"] == "page"
-    assert _addr_add(fake_word).call_args.args[1] == int(WdFieldType.PAGE)
-
-
-def test_cli_update_fields(fake_word):
-    import json
-
-    code, out = _invoke(["--json", "update-fields"])
-    assert code == EXIT_OK
-    assert json.loads(out)["ok"] is True
-    fake_word.ActiveDocument.Fields.Update.assert_called_once()

@@ -127,7 +127,7 @@ def test_document_find_replace_zero_matches_raises(fake_word):
 
 
 def test_document_find_replace_ambiguous_raises(fake_word, monkeypatch):
-    """Two matches without --all/--occurrence → AmbiguousMatchError."""
+    """Two matches without all/occurrence → AmbiguousMatchError."""
     # Patch Content.Text to have two occurrences of the same phrase.
     fake_word.ActiveDocument.Content.Text = "alpha beta alpha beta"
     fake_word.ActiveDocument.Content.End = len("alpha beta alpha beta")
@@ -242,12 +242,3 @@ def test_normalized_equal_folds_cosmetic_differences():
     assert normalized_equal("say “hi”", 'say "hi"')
     assert normalized_equal("a — b", "a - b")
     assert not normalized_equal("alpha", "beta")
-
-
-def test_replace_verification_error_classifies_distinctly():
-    from wordcom.cli.main import _exit_for
-    from wordcom.exceptions import classify
-
-    exc = ReplaceVerificationError("None", "None", "Looks", anchor_id="range:5-9")
-    assert classify(exc) == ("replace_verification", False)
-    assert _exit_for(exc) == 1  # generic exit code, not anchor/ambiguous

@@ -7,21 +7,11 @@ text "Body " over range 13–18).
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock
 
 import pytest
 import wordcom
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
 
 # --- the reader ----------------------------------------------------------------
 
@@ -74,26 +64,6 @@ def test_revisions_empty(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_revisions_json(fake_word):
-    code, out = _invoke(["--json", "revisions"])
-    assert code == EXIT_OK
-    rows = json.loads(out)
-    assert rows[0]["type"] == "insert"
-    assert rows[0]["author"] == "Reviewer"
-
-
-def test_cli_revisions_text(fake_word):
-    code, out = _invoke(["revisions"])
-    assert code == EXIT_OK
-    assert "insert" in out and "Reviewer" in out
-
-
-def test_cli_track_status(fake_word):
-    code, out = _invoke(["--json", "track", "status"])
-    assert code == EXIT_OK
-    assert json.loads(out) == {"tracked": False}
 
 
 # --- helper --------------------------------------------------------------------

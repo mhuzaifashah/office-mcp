@@ -9,20 +9,10 @@ the keyword args.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _tof_add(fake_word):
@@ -87,12 +77,3 @@ def test_exec_insert_table_of_figures(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_table_of_figures(fake_word):
-    code, out = _invoke(["--json", "table-of-figures", "--label", "Table", "--no-hyperlinks"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["label"] == "Table"
-    assert data["applied"]["hyperlinks"] is False
-    assert _tof_add(fake_word).call_args.kwargs["UseHyperlinks"] is False

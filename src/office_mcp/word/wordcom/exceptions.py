@@ -55,7 +55,7 @@ class AmbiguousMatchError(WordcomError):
 
     def __init__(self, find: str, matches: list[dict[str, Any]]) -> None:
         super().__init__(
-            f"{len(matches)} matches for {find!r}; pass --all or --occurrence N to disambiguate"
+            f"{len(matches)} matches for {find!r}; pass all=true or occurrence=N to disambiguate"
         )
         self.find = find
         self.matches = matches
@@ -130,7 +130,7 @@ class PathNotAllowedError(WordcomError):
     image-directory allowlist. It's a policy denial / bad-input error — not a
     "named thing is missing" — so it maps to the generic error code (1), keeping
     the six-code contract untouched. Not retryable: configure a whitelist
-    (`--save-dir` / `WORDCOM_SAVE_DIRS`, `--image-dir` / `WORDCOM_IMAGE_DIRS`)
+    (`WORDCOM_SAVE_DIRS` / `save_dirs=`, `WORDCOM_IMAGE_DIRS` / `image_dirs=`)
     or pass a local path inside it.
     """
 

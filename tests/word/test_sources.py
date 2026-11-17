@@ -8,20 +8,10 @@ builder is asserted by substring on the recorded `Sources.Add` argument.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _bib(fake_word):
@@ -220,32 +210,3 @@ def test_exec_set_bibliography_style(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_add_source(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "add-source",
-            "--type",
-            "book",
-            "--tag",
-            "Cli1",
-            "--author",
-            "Cli, Author",
-            "--year",
-            "2021",
-        ]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["source"] == "Cli1"
-    assert "<b:Tag>Cli1</b:Tag>" in _sources_add(fake_word).call_args.args[0]
-
-
-def test_cli_bibliography_style(fake_word):
-    code, out = _invoke(["--json", "bibliography-style", "--style", "Chicago"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["style"] == "Chicago"
-    assert _bib(fake_word).BibliographyStyle == "Chicago"

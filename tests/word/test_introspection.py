@@ -11,21 +11,14 @@ from __future__ import annotations
 from typing import Any
 
 import wordcom
-from click.testing import CliRunner
 from wordcom._dispatch import _read_impl, _write_impl
 from wordcom._ops import run_batch
 from wordcom._worker import InlineWorker
-from wordcom.cli.main import EXIT_ANCHOR_NOT_FOUND, EXIT_OK, main
 from wordcom.constants import WdInformation as _Info
 from wordcom.constants import WdStatistic as _Stat
 from wordcom.exceptions import OpError
 
 W = InlineWorker()
-
-
-def _invoke(args: list[str]) -> tuple[int, str, str]:
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout, result.stderr
 
 
 def _info(page: int, *, line: int = 1, col: int = 1, in_table: int = 0) -> Any:
@@ -156,32 +149,6 @@ def test_stats_preserves_saved_dirty_bit(fake_word):
 # ---------------------------------------------------------------------------
 # CLI — locate / stats
 # ---------------------------------------------------------------------------
-
-
-def test_cli_locate(fake_word):
-    import json
-
-    _seed_location(fake_word.ActiveDocument, 0, 10, start_page=1, end_page=2)
-    code, out, _ = _invoke(["locate", "--anchor-id", "range:0-10"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["anchor_id"] == "range:0-10"
-    assert data["page"] == 1 and data["end_page"] == 2
-
-
-def test_cli_locate_missing_anchor_exit_2(fake_word):
-    code, _out, _err = _invoke(["locate", "--anchor-id", "heading:99"])
-    assert code == EXIT_ANCHOR_NOT_FOUND
-
-
-def test_cli_stats(fake_word):
-    import json
-
-    _seed_stats(fake_word.ActiveDocument, saved=False)
-    code, out, _ = _invoke(["stats"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["pages"] == 3 and data["tables"] == 1 and data["saved"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -348,36 +315,6 @@ def test_find_paragraphs_bad_args_raise(fake_word):
 
 
 # CLI ----------------------------------------------------------------------
-
-
-def test_cli_read_between(fake_word):
-    import json
-
-    fake_word.ActiveDocument.Range(13, 29).Text = "Body text here.\r"
-    code, out, _ = _invoke(["read", "between", "--start", "heading:1", "--end", "heading:3"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["anchor_id"] == "range:13-29" and data["inclusive"] is False
-
-
-def test_cli_read_nearest_heading(fake_word):
-    import json
-
-    code, out, _ = _invoke(
-        ["read", "nearest-heading", "--anchor-id", "para:2", "--direction", "before"]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["heading"]["anchor_id"] == "heading:1" and data["direction"] == "before"
-
-
-def test_cli_find_paragraph(fake_word):
-    import json
-
-    code, out, _ = _invoke(["find-paragraph", "--text", "Risks", "--min-score", "0.99"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert [r["anchor_id"] for r in data] == ["para:3"]
 
 
 # MCP ----------------------------------------------------------------------

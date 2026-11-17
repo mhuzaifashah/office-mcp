@@ -10,22 +10,13 @@ paragraph, with alt text "logo").
 from __future__ import annotations
 
 import base64
-import json
 
 import pytest
 import wordcom
 from wordcom import _images
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError, ImageSourceError, OpError
 
 _SEED_BYTES = b"\x89PNG\r\n\x1a\nSEEDED"
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 # --- the OPC parser ------------------------------------------------------------
@@ -160,43 +151,3 @@ def test_image_anchor_set_text_raises(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_images_list(fake_word):
-    code, out = _invoke(["--json", "images"])
-    assert code == EXIT_OK
-    rows = json.loads(out)
-    assert rows[0]["anchor_id"] == "image:1"
-    assert rows[0]["mime"] == "image/png"
-    assert rows[0]["para"] == "para:2"
-
-
-def test_cli_read_image_base64(fake_word):
-    code, out = _invoke(["--json", "read-image", "--anchor-id", "image:1"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["mime"] == "image/png"
-    assert data["bytes"] == len(_SEED_BYTES)
-    assert base64.b64decode(data["base64"]) == _SEED_BYTES
-
-
-def test_cli_read_image_out_file(fake_word, tmp_path):
-    dest = tmp_path / "extracted.png"
-    code, out = _invoke(["--json", "read-image", "--anchor-id", "image:1", "--out", str(dest)])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["path"] == str(dest)
-    assert "base64" not in data
-    assert dest.read_bytes() == _SEED_BYTES
-
-
-def test_cli_read_image_missing_image_exit_1(fake_word):
-    # An anchor with no image is bad input (exit 1), not a missing anchor (2).
-    code, _ = _invoke(["--json", "read-image", "--anchor-id", "para:1"])
-    assert code == 1
-
-
-def test_cli_read_image_unknown_anchor_exit_2(fake_word):
-    code, _ = _invoke(["--json", "read-image", "--anchor-id", "image:9"])
-    assert code == 2

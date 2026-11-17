@@ -9,21 +9,11 @@ is wired in conftest to return the seeded bookmark names / heading texts.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdReferenceKind, WdReferenceType
 from wordcom.exceptions import AnchorNotFoundError, OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _addr_dup(fake_word):
@@ -68,17 +58,6 @@ def test_exec_add_bookmark(fake_word):
         )
     assert exc is None and result["ok"] is True
     assert result["outputs"][0]["bookmark"] == "Ref3"
-
-
-def test_cli_bookmark_add(fake_word):
-    code, out = _invoke(["--json", "bookmark", "add", "Ref4", "--anchor-id", "heading:1"])
-    assert code == EXIT_OK
-    assert json.loads(out)["bookmark"] == "Ref4"
-
-
-def test_cli_bookmark_add_bad_name(fake_word):
-    code, _ = _invoke(["--json", "bookmark", "add", "bad name", "--anchor-id", "heading:1"])
-    assert code != EXIT_OK
 
 
 # --- hyperlinks ----------------------------------------------------------------
@@ -129,21 +108,6 @@ def test_exec_add_hyperlink_requires_one_target(fake_word):
             doc, [{"op": "add_hyperlink", "anchor_id": "bookmark:Address"}], label="bad"
         )
     assert exc is not None and result["ok"] is False
-
-
-def test_cli_link(fake_word):
-    code, out = _invoke(
-        ["--json", "link", "--anchor-id", "bookmark:Address", "--url", "https://example.com"]
-    )
-    assert code == EXIT_OK
-    assert json.loads(out)["applied"]["url"] == "https://example.com"
-
-
-def test_cli_link_both_targets_errors(fake_word):
-    code, _ = _invoke(
-        ["--json", "link", "--anchor-id", "bookmark:Address", "--url", "u", "--bookmark", "b"]
-    )
-    assert code != EXIT_OK
 
 
 # --- cross-references ----------------------------------------------------------
@@ -244,23 +208,6 @@ def test_exec_insert_cross_reference_bad_target_fails(fake_word):
     assert result["failure"]["type"] == "AnchorNotFoundError"
 
 
-def test_cli_cross_ref(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "cross-ref",
-            "--anchor-id",
-            "bookmark:Address",
-            "--target",
-            "heading:1",
-            "--kind",
-            "page",
-        ]
-    )
-    assert code == EXIT_OK
-    assert json.loads(out)["applied"]["target"] == "heading:1"
-
-
 # --- captions ------------------------------------------------------------------
 
 
@@ -345,12 +292,3 @@ def test_exec_insert_caption_position(fake_word):
             label="t",
         )
     assert _addr_dup(fake_word).InsertCaption.call_args.args[2] == 0  # ABOVE
-
-
-def test_cli_caption(fake_word):
-    code, out = _invoke(
-        ["--json", "caption", "--anchor-id", "bookmark:Address", "--label", "Table", "--text", "T"]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["label"] == "Table"

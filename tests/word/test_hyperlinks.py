@@ -6,20 +6,10 @@ https://acme.example) whose range sits in the body paragraph (13–29).
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError, OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _make_app(**kwargs):
@@ -159,32 +149,6 @@ def test_op_set_hyperlink_no_fields_fails(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_set_hyperlink(fake_word):
-    code, out = _invoke(["set-hyperlink", "--index", "1", "--address", "https://cli.example"])
-    assert code == EXIT_OK
-    payload = json.loads(out)
-    assert payload["ok"] is True
-    assert payload["applied"]["address"] == "https://cli.example"
-
-
-def test_cli_set_hyperlink_no_fields_errors(fake_word):
-    code, _ = _invoke(["set-hyperlink", "--index", "1"])
-    assert code != EXIT_OK
-
-
-def test_cli_hyperlinks(fake_word):
-    code, out = _invoke(["hyperlinks"])
-    assert code == EXIT_OK
-    rows = json.loads(out)
-    assert rows[0]["address"] == "https://acme.example"
-
-
-def test_cli_hyperlinks_text(fake_word):
-    code, out = _invoke(["--text", "hyperlinks"])
-    assert code == EXIT_OK
-    assert "https://acme.example" in out
 
 
 # --- MCP -----------------------------------------------------------------------

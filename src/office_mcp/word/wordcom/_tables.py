@@ -3,8 +3,8 @@
 Tables are document-scoped collections (`doc.tables`), so they live here rather
 than in `_anchors.py`. A `Cell` *is* an `Anchor`, though: it targets the cell's
 COM `Range`, so the inherited `apply_style` / `format_paragraph` / `set_text`
-machinery works on cells with no special-casing, and `replace --anchor-id
-table:N:R:C` resolves through `Document.anchor_by_id` like any other anchor.
+machinery works on cells with no special-casing, and a `replace` op on
+`table:N:R:C` resolves through `Document.anchor_by_id` like any other anchor.
 
 The anchor-id schemes are `table:N:R:C` (a single cell, 1-based table/row/
 column), `table:N:row:R` (a whole row → [`RowAnchor`][wordcom.RowAnchor]), and
@@ -219,8 +219,8 @@ class RowAnchor(Anchor):
     Subclasses `Anchor` over the row's contiguous ``Rows(R).Range``, so the
     inherited styling verbs — `set_shading`, `set_borders`, `apply_style`,
     `format_run`, `format_paragraph` — restyle the *entire row* in one call
-    (``shading --anchor-id table:1:row:1`` shades the header row;
-    ``format-run --anchor-id table:1:row:1 --bold`` bolds it). `set_text` is
+    (a `set_shading` op on ``table:1:row:1`` shades the header row;
+    `format_run` with ``bold: true`` on it bolds it). `set_text` is
     refused — a row is a styling target, not a text slot; edit its cells via
     ``table:N:R:C``.
     """

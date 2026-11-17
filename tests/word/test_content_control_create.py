@@ -7,21 +7,11 @@ so the `WdContentControlType` wordcom passes is assertable without real Word.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdContentControlType
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _cc_add(fake_word):
@@ -159,36 +149,3 @@ def test_exec_create_content_control_unnamed_reports_none(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_create_content_control(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "create-content-control",
-            "--anchor-id",
-            "range:0-5",
-            "--kind",
-            "dropdown",
-            "--title",
-            "Priority",
-            "--item",
-            "High",
-            "--item",
-            "Low=LO",
-        ]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["content_control"] == "Priority"
-    assert data["cc_anchor_id"] == "cc:Priority"
-    created = _cc_add(fake_word).side_effect.__self__._items[-1]
-    assert created.DropdownListEntries.Add.call_args_list[1].args == ("Low", "LO")
-
-
-def test_cli_create_content_control_bad_kind(fake_word):
-    code, _ = _invoke(
-        ["--json", "create-content-control", "--anchor-id", "range:0-5", "--kind", "banana"]
-    )
-    assert code != EXIT_OK

@@ -6,18 +6,8 @@ grammar error ("is are"), and a handful of readability statistics.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
-from wordcom.cli.main import EXIT_OK, main
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _make_doc(**kwargs):
@@ -70,21 +60,6 @@ def test_proofing_unavailable_is_graceful(monkeypatch):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_proofing(fake_word):
-    code, out = _invoke(["proofing"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["spelling"]["count"] == 1
-    assert data["readability"]["flesch_reading_ease"] == 65.5
-
-
-def test_cli_proofing_text(fake_word):
-    code, out = _invoke(["--text", "proofing"])
-    assert code == EXIT_OK
-    assert "spelling errors: 1" in out
-    assert "flesch_reading_ease" in out
 
 
 # --- MCP -----------------------------------------------------------------------

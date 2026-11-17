@@ -7,12 +7,9 @@ Round-trips against the `fake_word` MagicMock. `_FakePageSetup` carries
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdOrientation, WdPaperSize
 from wordcom.exceptions import OpError
 
@@ -149,26 +146,3 @@ def test_exec_set_page_setup_bad_paper_size_fails_cleanly(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
-
-def test_cli_page_setup(fake_word):
-    code, out = _invoke(["--json", "page-setup", "--orientation", "landscape", "--columns", "2"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True
-    assert data["applied"] == {"orientation": "landscape", "columns": 2}
-    ps = _ps(fake_word)
-    assert ps.Orientation == int(WdOrientation.LANDSCAPE)
-    ps.TextColumns.SetCount.assert_called_once_with(2)
-
-
-def test_cli_page_setup_requires_an_option(fake_word):
-    code, _ = _invoke(["--json", "page-setup"])
-    assert code != EXIT_OK

@@ -10,14 +10,9 @@ bottom exercises the real rasteriser when PyMuPDF *is* available.
 
 from __future__ import annotations
 
-import base64
-import json
-
 import pytest
 import wordcom
-from click.testing import CliRunner
 from wordcom import _snapshot
-from wordcom.cli.main import EXIT_ANCHOR_NOT_FOUND, EXIT_OK, EXIT_OTHER, main
 from wordcom.constants import WdExportFormat, WdExportItem, WdExportRange
 from wordcom.exceptions import OpError, SnapshotError
 
@@ -96,13 +91,6 @@ def test_snapshot_bad_markup_raises(fake_word, fake_pages):
     with wordcom.attach() as word:
         with pytest.raises(OpError):
             word.documents.active.snapshot(markup="loud")
-
-
-def test_cli_snapshot_markup_all(fake_word, fake_pages):
-    fake_pages(1)
-    code, _stdout, _err = _invoke(["snapshot", "--page", "1", "--markup", "all"])
-    assert code == EXIT_OK
-    assert _export_kwargs(fake_word)["Item"] == int(WdExportItem.WITH_MARKUP)
 
 
 def test_snapshot_single_page(fake_word, fake_pages):
@@ -260,88 +248,6 @@ def test_snapshot_without_pymupdf_raises(fake_word, monkeypatch):
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
-
-
-def _invoke(args):
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout, result.stderr
-
-
-def test_cli_snapshot_base64_inline(fake_word, fake_pages):
-    state = fake_pages(1)
-    code, out, _ = _invoke(["snapshot", "--page", "1"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] is True and data["count"] == 1
-    img = data["images"][0]
-    assert img["page"] == 1
-    assert base64.b64decode(img["base64"]) == state["pngs"][0]
-    assert "path" not in img
-
-
-def test_cli_snapshot_out_writes_file(fake_word, fake_pages, tmp_path):
-    state = fake_pages(1)
-    out = tmp_path / "s.png"
-    code, stdout, _ = _invoke(["snapshot", "--anchor-id", "heading:1", "--out", str(out)])
-    assert code == EXIT_OK
-    assert out.read_bytes() == state["pngs"][0]
-    img = json.loads(stdout)["images"][0]
-    assert img["path"] == str(out)
-    assert "base64" not in img
-
-
-def test_cli_snapshot_max_dim_forwarded_and_reported(fake_word, fake_pages):
-    state = fake_pages(1)
-    code, out, _ = _invoke(["snapshot", "--page", "1", "--max-dim", "900"])
-    assert code == EXIT_OK
-    assert state["calls"][0]["max_dim"] == 900
-    assert json.loads(out)["max_dim"] == 900
-
-
-def test_cli_snapshot_bad_max_dim_is_usage_error(fake_word, fake_pages):
-    fake_pages(1)
-    code, _, err = _invoke(["snapshot", "--page", "1", "--max-dim", "0"])
-    assert code != EXIT_OK
-    assert "--max-dim" in err
-
-
-def test_cli_snapshot_pages_range(fake_word, fake_pages):
-    fake_pages(3)
-    code, out, _ = _invoke(["snapshot", "--pages", "2-4"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["count"] == 3
-    assert [im["page"] for im in data["images"]] == [2, 3, 4]
-
-
-def test_cli_snapshot_bad_pages_is_usage_error(fake_word, fake_pages):
-    fake_pages(1)
-    code, _, err = _invoke(["snapshot", "--pages", "notarange"])
-    assert code != EXIT_OK
-    assert "--pages" in err
-
-
-def test_cli_snapshot_two_targets_is_usage_error(fake_word, fake_pages):
-    fake_pages(1)
-    code, _, err = _invoke(["snapshot", "--page", "1", "--anchor-id", "heading:1"])
-    assert code != EXIT_OK
-    assert "at most one" in err.lower()
-
-
-def test_cli_snapshot_missing_anchor(fake_word, fake_pages):
-    fake_pages(1)
-    code, _, err = _invoke(["snapshot", "--anchor-id", "heading:99"])
-    assert code == EXIT_ANCHOR_NOT_FOUND
-    assert "heading" in err.lower()
-
-
-def test_cli_snapshot_without_pymupdf_exit_other(fake_word, monkeypatch):
-    monkeypatch.setattr(
-        _snapshot, "_import_fitz", lambda: (_ for _ in ()).throw(SnapshotError("missing"))
-    )
-    code, _, err = _invoke(["snapshot", "--page", "1"])
-    assert code == EXIT_OTHER
-    assert "error" in err.lower()
 
 
 # ---------------------------------------------------------------------------

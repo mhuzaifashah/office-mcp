@@ -12,13 +12,11 @@ covered by the smoke pass.
 from __future__ import annotations
 
 import base64
-import json
 
 import pytest
 import wordcom
 from wordcom._dispatch import _build_write_op, _read_impl, _write_impl
 from wordcom._worker import InlineWorker
-from wordcom.cli.main import EXIT_ANCHOR_NOT_FOUND, EXIT_OK, main
 from wordcom.exceptions import AnchorNotFoundError, OpError
 
 # A 1x1 transparent PNG (same as test_images).
@@ -29,13 +27,6 @@ _PNG = base64.b64decode(
 _B64 = base64.b64encode(_PNG).decode("ascii")
 
 W = InlineWorker()
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 @pytest.fixture
@@ -331,98 +322,7 @@ def test_body_name_prefixed_watermark_excluded(fake_word):
 # --- exec ops -------------------------------------------------------------------
 
 
-def test_exec_set_shape_wrap(fake_word):
-    from wordcom.constants import WdWrapType
-
-    script = json.dumps(
-        [
-            {"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"},
-            {"op": "set_shape_wrap", "anchor_id": "shape:1", "wrap": "behind"},
-        ]
-    )
-    code, out = _invoke(["--json", "exec", "--ops", script])
-    assert code == EXIT_OK
-    assert json.loads(out)["ops_run"] == 2
-    assert fake_word.ActiveDocument.Shapes.Item(1).WrapFormat.Type == int(WdWrapType.BEHIND)
-
-
-def test_exec_insert_text_box_returns_shape_output(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "start", "text": "Q"}]',
-        ]
-    )
-    assert code == EXIT_OK
-    outputs = json.loads(out)["outputs"]
-    assert outputs[0]["anchor_id"] == "shape:1"
-
-
-def test_exec_shape_op_on_non_shape_raises(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "exec",
-            "--ops",
-            '[{"op": "set_shape_wrap", "anchor_id": "para:1", "wrap": "tight"}]',
-        ]
-    )
-    assert code != EXIT_OK
-    assert "not a shape" in out
-
-
 # --- CLI ------------------------------------------------------------------------
-
-
-def test_cli_shapes_list(fake_word):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"}]',
-        ]
-    )
-    code, out = _invoke(["--json", "shapes"])
-    assert code == EXIT_OK
-    rows = json.loads(out)
-    assert rows[0]["anchor_id"] == "shape:1"
-
-
-def test_cli_set_shape_size(fake_word):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"}]',
-        ]
-    )
-    code, out = _invoke(["--json", "set-shape-size", "--anchor-id", "shape:1", "--width", "3in"])
-    assert code == EXIT_OK
-    assert fake_word.ActiveDocument.Shapes.Item(1).Width == 216.0
-
-
-def test_cli_format_shape_requires_an_option(fake_word):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"}]',
-        ]
-    )
-    code, _ = _invoke(["format-shape", "--anchor-id", "shape:1"])
-    assert code != EXIT_OK  # no formatting option passed
-
-
-def test_cli_set_shape_wrap_bad_anchor_exits_2(fake_word):
-    code, _ = _invoke(["set-shape-wrap", "--anchor-id", "shape:99", "--wrap", "tight"])
-    assert code == EXIT_ANCHOR_NOT_FOUND
-
-
-def test_cli_set_shape_wrap_on_non_shape_is_usage_error(fake_word):
-    code, _ = _invoke(["set-shape-wrap", "--anchor-id", "para:1", "--wrap", "tight"])
-    assert code != EXIT_OK  # not a shape
 
 
 # --- MCP ------------------------------------------------------------------------
@@ -606,19 +506,6 @@ def test_image_set_size(fake_word):
     assert fake_word.ActiveDocument.InlineShapes.Item(1).Width == 216.0
 
 
-def test_image_op_on_non_image_raises(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "exec",
-            "--ops",
-            '[{"op": "set_image_size", "anchor_id": "para:1", "width": "1in"}]',
-        ]
-    )
-    assert code != EXIT_OK
-    assert "not an image" in out
-
-
 # --- textbox:N alias ------------------------------------------------------------
 
 
@@ -642,63 +529,6 @@ def test_textbox_alias_unknown_raises(fake_word):
 
 
 # --- new exec / CLI / MCP wiring ------------------------------------------------
-
-
-def test_exec_set_shape_rotation(fake_word):
-    script = json.dumps(
-        [
-            {"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"},
-            {"op": "set_shape_rotation", "anchor_id": "shape:1", "degrees": 45},
-        ]
-    )
-    code, out = _invoke(["--json", "exec", "--ops", script])
-    assert code == EXIT_OK
-    assert fake_word.ActiveDocument.Shapes.Item(1).Rotation == 45.0
-
-
-def test_exec_group_and_ungroup(fake_word):
-    group_script = json.dumps(
-        [
-            {"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "A"},
-            {"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "B"},
-            {"op": "group_shapes", "shapes": ["shape:1", "shape:2"]},
-        ]
-    )
-    code, out = _invoke(["--json", "exec", "--ops", group_script])
-    assert code == EXIT_OK
-    outputs = json.loads(out)["outputs"]
-    assert outputs[-1]["anchor_id"] == "shape:1"  # the new group
-    assert fake_word.ActiveDocument.Shapes.Count == 1
-
-    code, out = _invoke(
-        ["--json", "exec", "--ops", '[{"op": "ungroup_shape", "anchor_id": "shape:1"}]']
-    )
-    assert code == EXIT_OK
-    assert json.loads(out)["outputs"][0]["count"] == 2
-
-
-def test_cli_set_shape_z_order(fake_word):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"}]',
-        ]
-    )
-    code, _ = _invoke(["--json", "set-shape-z-order", "--anchor-id", "shape:1", "--order", "back"])
-    assert code == EXIT_OK
-
-
-def test_cli_group_shapes_needs_two(fake_word):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"}]',
-        ]
-    )
-    code, _ = _invoke(["group-shapes", "--anchor-id", "shape:1"])
-    assert code != EXIT_OK  # one shape isn't a group
 
 
 def test_mcp_build_set_shape_rotation_needs_degrees():
@@ -761,30 +591,6 @@ def test_shapes_list_includes_wrap_side_and_crop(fake_word):
         rows = doc.shapes.list()
     assert rows[0]["wrap_side"] == "right"
     assert rows[0]["crop"] is None  # a text box carries no picture crop
-
-
-def test_exec_set_shape_wrap_side(fake_word):
-    script = json.dumps(
-        [
-            {"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"},
-            {"op": "set_shape_wrap", "anchor_id": "shape:1", "wrap": "tight", "side": "largest"},
-        ]
-    )
-    code, out = _invoke(["--json", "exec", "--ops", script])
-    assert code == EXIT_OK
-    assert fake_word.ActiveDocument.Shapes.Item(1).WrapFormat.Side == 3  # largest
-
-
-def test_cli_set_shape_wrap_requires_an_option(fake_word):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            '[{"op": "insert_text_box", "anchor_id": "bookmark:Address", "text": "Q"}]',
-        ]
-    )
-    code, _ = _invoke(["set-shape-wrap", "--anchor-id", "shape:1"])
-    assert code != EXIT_OK  # no wrap/side/distance passed
 
 
 def test_mcp_build_set_shape_wrap_op_optional_wrap():
@@ -850,84 +656,6 @@ def test_image_set_crop(fake_word):
         with doc.edit("crop"):
             doc.images[1].set_crop(right="0.2in")
     assert fake_word.ActiveDocument.InlineShapes.Item(1).PictureFormat.CropRight == 14.4
-
-
-def test_exec_set_image_crop(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "exec",
-            "--ops",
-            '[{"op": "set_image_crop", "anchor_id": "image:1", "left": "0.1in"}]',
-        ]
-    )
-    assert code == EXIT_OK
-    assert fake_word.ActiveDocument.InlineShapes.Item(1).PictureFormat.CropLeft == 7.2
-
-
-def test_exec_crop_ops_accept_crop_aliases(fake_word):
-    # `crop_*` (the MCP word_write names) are accepted aliases in exec/CLI too, so a
-    # batch authored from the word_exec docstring or word_write works either way.
-    from wordcom._ops import _crop_kwargs, unexpected_fields
-
-    assert _crop_kwargs({"crop_left": 5, "crop_top": 2}) == {"left": 5, "top": 2}
-    assert _crop_kwargs({"left": 1, "crop_left": 9}) == {"left": 1}  # bare wins
-    for kind in ("set_shape_crop", "set_image_crop"):
-        assert unexpected_fields({"op": kind, "anchor_id": "x", "crop_left": 5}, kind) == []
-
-    code, _ = _invoke(
-        [
-            "--json",
-            "exec",
-            "--ops",
-            '[{"op": "set_image_crop", "anchor_id": "image:1", "crop_left": "0.1in"}]',
-        ]
-    )
-    assert code == EXIT_OK
-    assert fake_word.ActiveDocument.InlineShapes.Item(1).PictureFormat.CropLeft == 7.2
-
-
-def test_cli_set_shape_crop(fake_word, png_file):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            json.dumps(
-                [
-                    {
-                        "op": "insert_image",
-                        "anchor_id": "bookmark:Address",
-                        "wrap": "square",
-                        "path": str(png_file),
-                    }
-                ]
-            ),
-        ]
-    )
-    code, _ = _invoke(["--json", "set-shape-crop", "--anchor-id", "shape:1", "--top", "5"])
-    assert code == EXIT_OK
-    assert fake_word.ActiveDocument.Shapes.Item(1).PictureFormat.CropTop == 5.0
-
-
-def test_cli_set_shape_crop_requires_an_edge(fake_word, png_file):
-    _invoke(
-        [
-            "exec",
-            "--ops",
-            json.dumps(
-                [
-                    {
-                        "op": "insert_image",
-                        "anchor_id": "bookmark:Address",
-                        "wrap": "square",
-                        "path": str(png_file),
-                    }
-                ]
-            ),
-        ]
-    )
-    code, _ = _invoke(["set-shape-crop", "--anchor-id", "shape:1"])
-    assert code != EXIT_OK  # no edge passed
 
 
 def test_mcp_build_set_shape_crop_maps_crop_params():

@@ -6,21 +6,11 @@ the last `AutoFitBehavior` argument.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdAutoFitBehavior
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _table_com(fake_word):
@@ -97,20 +87,6 @@ def test_op_autofit_defaults_content(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_table_autofit(fake_word):
-    code, out = _invoke(["table", "autofit", "--table", "1", "--mode", "window"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["ok"] and data["mode"] == "window"
-    assert _table_com(fake_word).autofit_behavior == int(WdAutoFitBehavior.WINDOW)
-
-
-def test_cli_table_autofit_bad_mode(fake_word):
-    # click.Choice rejects an unknown mode before the command body runs.
-    code, _ = _invoke(["table", "autofit", "--table", "1", "--mode", "nope"])
-    assert code != EXIT_OK
 
 
 # --- MCP -----------------------------------------------------------------------

@@ -7,25 +7,15 @@ Also covers the verb-first bookmark / section CLI consolidation.
 
 from __future__ import annotations
 
-import json
-
 import pytest
-from click.testing import CliRunner
 from wordcom import attach
 from wordcom._dispatch import _write_impl
 from wordcom._paths import PathPolicy, reject_nonlocal_image_path
 from wordcom._worker import InlineWorker
-from wordcom.cli.main import EXIT_OK, EXIT_OTHER, main
 from wordcom.exceptions import OpError, PathNotAllowedError
 
 _BS = chr(92)  # a single backslash, unambiguous through every quoting layer
 _UNC = _BS + _BS + "host" + _BS + "share" + _BS + "a.png"
-
-
-def _invoke(args: list[str], *, input: str | None = None) -> tuple[int, str, str]:
-    runner = CliRunner()
-    result = runner.invoke(main, args, input=input, catch_exceptions=False)
-    return result.exit_code, result.stdout, result.stderr
 
 
 def _active():
@@ -173,52 +163,6 @@ class TestDocumentPersistence:
 # ---------------------------------------------------------------------------
 
 
-class TestPersistenceCli:
-    def test_save_as_deny_all(self, fake_word, tmp_path):
-        code, _, err = _invoke(["save-as", str(tmp_path / "x.docx")])
-        assert code == EXIT_OTHER
-        assert "saving is disabled" in err
-
-    def test_save_as_whitelisted(self, fake_word, tmp_path):
-        code, out, _ = _invoke(["--save-dir", str(tmp_path), "save-as", str(tmp_path / "x.docx")])
-        assert code == EXIT_OK
-        data = json.loads(out)
-        assert data["ok"] is True
-        assert data["format"] == "docx"
-
-    def test_save_as_outside_whitelist(self, fake_word, tmp_path):
-        allowed = tmp_path / "ok"
-        allowed.mkdir()
-        code, _, err = _invoke(["--save-dir", str(allowed), "save-as", str(tmp_path / "x.docx")])
-        assert code == EXIT_OTHER
-        assert "outside" in err
-
-    def test_export_pdf_whitelisted(self, fake_word, tmp_path):
-        code, out, _ = _invoke(["--save-dir", str(tmp_path), "export-pdf", str(tmp_path / "x.pdf")])
-        assert code == EXIT_OK
-        assert json.loads(out)["ok"] is True
-
-    def test_save_env_whitelist(self, fake_word, tmp_path, monkeypatch):
-        monkeypatch.setenv("WORDCOM_SAVE_DIRS", str(tmp_path))
-        code, out, _ = _invoke(["save-as", str(tmp_path / "x.docx")])
-        assert code == EXIT_OK
-
-    def test_insert_image_rejects_unc(self, fake_word):
-        code, _, err = _invoke(
-            ["insert-image", "--anchor-id", "end", "--wrap", "inline", "--path", _UNC]
-        )
-        assert code == EXIT_OTHER
-        assert "UNC" in err or "non-local" in err
-
-    def test_exec_rejects_unc_image(self, fake_word):
-        ops = json.dumps(
-            {"ops": [{"op": "insert_image", "anchor_id": "end", "wrap": "inline", "path": _UNC}]}
-        )
-        code, _, err = _invoke(["exec", "--ops", "-"], input=ops)
-        assert code == EXIT_OTHER
-        assert "UNC" in err or "non-local" in err
-
-
 # ---------------------------------------------------------------------------
 # MCP — save commands honour the policy
 # ---------------------------------------------------------------------------
@@ -247,61 +191,3 @@ class TestPersistenceMcp:
 # ---------------------------------------------------------------------------
 # Bookmark / section CLI consolidation (verb-first)
 # ---------------------------------------------------------------------------
-
-
-class TestBookmarkConsolidation:
-    def test_write_bookmark_create(self, fake_word):
-        code, out, _ = _invoke(
-            ["write", "bookmark", "NewMark", "--create", "--anchor-id", "heading:1"]
-        )
-        assert code == EXIT_OK
-        data = json.loads(out)
-        assert data["created"] is True
-        assert data["bookmark"] == "NewMark"
-
-    def test_write_bookmark_text_still_works(self, fake_word):
-        code, out, _ = _invoke(["write", "bookmark", "Address", "--text", "123 Main"])
-        assert code == EXIT_OK
-        assert json.loads(out)["anchor"]["kind"] == "bookmark"
-
-    def test_write_bookmark_create_requires_anchor(self, fake_word):
-        code, _, err = _invoke(["write", "bookmark", "X", "--create"])
-        assert code == 2  # click UsageError
-        assert "anchor-id" in err
-
-    def test_write_bookmark_create_and_text_conflict(self, fake_word):
-        code, _, err = _invoke(
-            ["write", "bookmark", "X", "--create", "--anchor-id", "heading:1", "--text", "y"]
-        )
-        assert code == 2
-        assert "mutually exclusive" in err
-
-    def test_write_bookmark_needs_a_mode(self, fake_word):
-        code, _, err = _invoke(["write", "bookmark", "Address"])
-        assert code == 2
-
-    def test_read_bookmark_list(self, fake_word):
-        code, out, _ = _invoke(["read", "bookmark", "--list"])
-        assert code == EXIT_OK
-        assert "Address" in json.loads(out)
-
-    def test_read_bookmark_name_and_list_conflict(self, fake_word):
-        code, _, err = _invoke(["read", "bookmark", "Address", "--list"])
-        assert code == 2
-
-    def test_bookmark_add_alias_still_works(self, fake_word):
-        code, out, _ = _invoke(["bookmark", "add", "NewMark", "--anchor-id", "heading:1"])
-        assert code == EXIT_OK
-        assert json.loads(out)["bookmark"] == "NewMark"
-
-
-class TestSectionConsolidation:
-    def test_sections_top_level(self, fake_word):
-        code, out, _ = _invoke(["sections"])
-        assert code == EXIT_OK
-        assert isinstance(json.loads(out), list)
-
-    def test_section_list_alias_still_works(self, fake_word):
-        code, out, _ = _invoke(["section", "list"])
-        assert code == EXIT_OK
-        assert isinstance(json.loads(out), list)

@@ -9,22 +9,13 @@ is exercised by monkeypatching `wordcom._themes._themes_dir` onto a tmp library.
 
 from __future__ import annotations
 
-import json
 import os
 
 import pytest
 import wordcom
 from wordcom._format import bgr_to_hex, to_bgr
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _theme(fake_word):
@@ -269,46 +260,3 @@ def test_exec_set_theme_fonts(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_theme(fake_word):
-    code, out = _invoke(["--json", "theme"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["major_font"] == "Aptos Display"
-    assert data["colors"]["accent1"] == "#050505"
-
-
-def test_cli_list_themes(fake_word, tmp_path, monkeypatch):
-    lib = _make_library(tmp_path)
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: lib)
-    code, out = _invoke(["--json", "list-themes"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["themes"] == ["Facet", "Ion"]
-
-
-def test_cli_apply_theme(fake_word, tmp_path):
-    thmx = tmp_path / "House.thmx"
-    thmx.write_text("thmx")
-    code, out = _invoke(["--json", "apply-theme", "--theme", str(thmx)])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["theme"] == "House"
-    fake_word.ActiveDocument.ApplyDocumentTheme.assert_called_once_with(str(thmx))
-
-
-def test_cli_set_theme_colors(fake_word):
-    code, out = _invoke(["--json", "set-theme-colors", "--accent1", "#FF0000"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["colors"]["accent1"] == "#FF0000"
-    assert _theme(fake_word).ThemeColorScheme.Colors(5).RGB == to_bgr("#FF0000")
-
-
-def test_cli_set_theme_fonts(fake_word):
-    code, out = _invoke(["--json", "set-theme-fonts", "--major", "Arial", "--minor", "Calibri"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["major_font"] == "Arial"
-    assert data["minor_font"] == "Calibri"

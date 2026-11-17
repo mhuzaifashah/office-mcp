@@ -251,43 +251,6 @@ def test_regularize_exec_op_returns_report(fake_word):
 # --- CLI ---------------------------------------------------------------------
 
 
-def _invoke(args):
-    from click.testing import CliRunner
-    from wordcom.cli.main import main
-
-    res = CliRunner().invoke(main, args, catch_exceptions=False)
-    return res.exit_code, res.stdout
-
-
-def test_cli_lint_json(fake_word):
-    import json
-
-    code, out = _invoke(["--json", "lint", "--rule", "heading-keep-with-next"])
-    assert code == 0
-    findings = json.loads(out)
-    assert {f["anchor_id"] for f in findings} == {"heading:1", "heading:3"}
-
-
-def test_cli_regularize_dry_run(fake_word):
-    import json
-
-    code, out = _invoke(["--json", "regularize", "--rule", "heading-keep-with-next", "--dry-run"])
-    assert code == 0
-    report = json.loads(out)
-    assert report["dry_run"] is True
-    assert report["applied"] == []
-
-
-def test_cli_read_format(fake_word):
-    import json
-
-    code, out = _invoke(["--json", "read", "format", "--anchor-id", "heading:1"])
-    assert code == 0
-    info = json.loads(out)
-    assert info["anchor_id"] == "heading:1"
-    assert "keep_with_next" in info["paragraph"]
-
-
 # --- MCP ---------------------------------------------------------------------
 
 

@@ -9,20 +9,10 @@ paragraph para:2 = "Body text here.").
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock
 
 import wordcom
 from wordcom._revisions import segment_runs
-from wordcom.cli.main import EXIT_OK, main
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
-
 
 # --- segment_runs (pure) -------------------------------------------------------
 #
@@ -164,60 +154,7 @@ def test_accept_all_within_anchor_scopes_to_its_range(fake_word):
 # --- CLI ------------------------------------------------------------------------
 
 
-def test_cli_revision_accept(fake_word):
-    code, out = _invoke(["--json", "revision", "accept", "--index", "1"])
-    assert code == EXIT_OK
-    assert json.loads(out) == {"ok": True, "index": 1, "accepted": True}
-
-
-def test_cli_revision_reject(fake_word):
-    code, out = _invoke(["--json", "revision", "reject", "--index", "1"])
-    assert code == EXIT_OK
-    assert json.loads(out)["rejected"] is True
-
-
-def test_cli_revision_accept_all(fake_word):
-    code, out = _invoke(["--json", "revision", "accept-all"])
-    assert code == EXIT_OK
-    assert json.loads(out)["accepted"] == 1
-
-
-def test_cli_revision_list_alias(fake_word):
-    code, out = _invoke(["--json", "revision", "list"])
-    assert code == EXIT_OK
-    assert json.loads(out)[0]["type"] == "insert"
-
-
-def test_cli_read_text_final(fake_word):
-    code, out = _invoke(["--json", "read", "text", "--anchor-id", "para:2", "--view", "final"])
-    assert code == EXIT_OK
-    payload = json.loads(out)
-    assert payload["view"] == "final"
-    assert payload["text"].startswith("Body text here.")
-
-
-def test_cli_read_text_segments(fake_word):
-    code, out = _invoke(["--json", "read", "text", "--anchor-id", "para:2", "--view", "segments"])
-    assert code == EXIT_OK
-    segs = json.loads(out)["segments"]
-    assert segs[0] == {"text": "Body ", "change": "insert"}
-
-
 # --- exec ops -------------------------------------------------------------------
-
-
-def test_exec_accept_revision(fake_word):
-    code, out = _invoke(["--json", "exec", "--ops", '[{"op": "accept_revision", "index": 1}]'])
-    assert code == EXIT_OK
-    assert json.loads(out)["ok"] is True
-    with wordcom.attach() as word:
-        assert len(word.documents.active.revisions) == 0
-
-
-def test_exec_accept_all_revisions(fake_word):
-    code, out = _invoke(["--json", "exec", "--ops", '[{"op": "accept_all_revisions"}]'])
-    assert code == EXIT_OK
-    assert json.loads(out)["ops_run"] == 1
 
 
 # --- helpers --------------------------------------------------------------------

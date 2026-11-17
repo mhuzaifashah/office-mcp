@@ -8,20 +8,10 @@ as in `test_fields.py`); `insert_table_of_authorities` calls
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _field_add(fake_word):
@@ -140,31 +130,3 @@ def test_exec_mark_then_insert_toa(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_mark_citation(fake_word):
-    code, out = _invoke(
-        [
-            "--json",
-            "mark-citation",
-            "--anchor-id",
-            "bookmark:Address",
-            "--long",
-            "Smith v. Jones",
-            "--category",
-            "cases",
-        ]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["long_citation"] == "Smith v. Jones"
-    assert _field_add(fake_word).call_args.args[2].endswith("\\c 1")
-
-
-def test_cli_table_of_authorities(fake_word):
-    code, out = _invoke(["--json", "table-of-authorities", "--category", "statutes", "--no-passim"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["category"] == "statutes"
-    assert data["applied"]["passim"] is False
-    assert _toa_add(fake_word).call_args.args[1] == 2

@@ -8,21 +8,11 @@ with a combo_box/dropdown control carrying `kind` + `items`.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdContentControlType
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _make_app(**kwargs):
@@ -160,29 +150,6 @@ def test_op_set_cc_on_wrong_anchor_fails(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_set_cc_properties(fake_word):
-    code, out = _invoke(["set-cc-properties", "--anchor-id", "cc:Signatory", "--title", "Renamed"])
-    assert code == EXIT_OK
-    payload = json.loads(out)
-    assert payload["ok"] is True
-    assert payload["applied"]["title"] == "Renamed"
-
-
-def test_cli_set_cc_properties_no_options_errors(fake_word):
-    code, _ = _invoke(["set-cc-properties", "--anchor-id", "cc:Signatory"])
-    assert code != EXIT_OK
-
-
-def test_cli_set_cc_items(monkeypatch):
-    _dropdown_app(monkeypatch)
-    code, out = _invoke(
-        ["set-cc-items", "--anchor-id", "cc:Priority", "--item", "One", "--item", "Two=2"]
-    )
-    assert code == EXIT_OK
-    payload = json.loads(out)
-    assert payload["applied"]["items"] == ["One", {"text": "Two", "value": "2"}]
 
 
 # --- MCP -----------------------------------------------------------------------

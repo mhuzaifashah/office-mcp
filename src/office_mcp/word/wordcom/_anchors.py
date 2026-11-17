@@ -3382,7 +3382,7 @@ class StartAnchor(Anchor):
 
     def insert_before(self, text: str) -> None:
         # A single start-point has no distinct "after"; prepending is the only
-        # sensible reading, and it keeps `--anchor-id start` honest either way.
+        # sensible reading, and it keeps the `start` anchor honest either way.
         self._doc.prepend(text)
 
     def insert_paragraph_after(self, text: str, style: str | None = None) -> None:
@@ -3439,7 +3439,7 @@ class EndAnchor(Anchor):
 
     def insert_before(self, text: str) -> None:
         # A single end-point has no distinct "before"; appending is the only
-        # sensible reading, and it keeps `--anchor-id end` honest either way.
+        # sensible reading, and it keeps the `end` anchor honest either way.
         self._doc.append(text)
 
     def insert_paragraph_after(self, text: str, style: str | None = None) -> None:

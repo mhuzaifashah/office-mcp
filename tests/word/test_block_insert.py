@@ -8,25 +8,17 @@ lives in the smoke tests.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
 import wordcom
-from click.testing import CliRunner
 from wordcom._anchors import RangeAnchor
 from wordcom._dispatch import _write_impl
 from wordcom._ops import run_batch
 from wordcom._worker import InlineWorker
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.exceptions import OpError, StyleNotFoundError
 
 W = InlineWorker()
-
-
-def _invoke(args: list[str], *, input: str | None = None) -> tuple[int, str, str]:
-    result = CliRunner().invoke(main, args, input=input, catch_exceptions=False)
-    return result.exit_code, result.stdout, result.stderr
 
 
 # ---------------------------------------------------------------------------
@@ -156,44 +148,6 @@ class TestInsertBlockOp:
 # ---------------------------------------------------------------------------
 # CLI — insert-block / insert --runs
 # ---------------------------------------------------------------------------
-
-
-class TestInsertBlockCli:
-    def test_insert_block_reports_range(self, fake_word: Any) -> None:
-        items = json.dumps([{"text": "**A** b", "style": "Heading 1"}, "plain"])
-        code, out, _ = _invoke(["insert-block", "--anchor-id", "heading:1", "--items", items])
-        assert code == EXIT_OK
-        data = json.loads(out)
-        assert data["ok"] is True
-        assert data["paragraphs"] == 2
-        assert data["anchor_id"].startswith("range:")
-
-    def test_insert_block_items_from_stdin(self, fake_word: Any) -> None:
-        items = json.dumps(["one", "two"])
-        code, out, _ = _invoke(["insert-block", "--anchor-id", "end", "--items", "-"], input=items)
-        assert code == EXIT_OK
-        assert json.loads(out)["paragraphs"] == 2
-
-    def test_insert_block_bad_json_is_usage_error(self, fake_word: Any) -> None:
-        code, _, err = _invoke(["insert-block", "--anchor-id", "end", "--items", "{not json"])
-        assert code != EXIT_OK
-        assert "JSON" in err
-
-    def test_insert_with_runs(self, fake_word: Any) -> None:
-        runs = json.dumps([{"text": "L", "bold": True}, {"text": " rest"}])
-        code, out, _ = _invoke(["insert", "--anchor-id", "heading:1", "--runs", runs])
-        assert code == EXIT_OK
-        assert json.loads(out)["ok"] is True
-
-    def test_insert_text_and_runs_is_usage_error(self, fake_word: Any) -> None:
-        code, _, err = _invoke(["insert", "--anchor-id", "end", "--text", "a", "--runs", "[]"])
-        assert code != EXIT_OK
-        assert "exactly one" in err
-
-    def test_insert_neither_text_nor_runs_is_usage_error(self, fake_word: Any) -> None:
-        code, _, err = _invoke(["insert", "--anchor-id", "end"])
-        assert code != EXIT_OK
-        assert "exactly one" in err
 
 
 # ---------------------------------------------------------------------------

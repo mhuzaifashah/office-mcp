@@ -8,21 +8,11 @@ without real Word.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import wordcom
 from wordcom._ops import run_batch
-from wordcom.cli.main import EXIT_OK, main
 from wordcom.constants import WdIndexType
 from wordcom.exceptions import OpError
-
-
-def _invoke(args):
-    from click.testing import CliRunner
-
-    result = CliRunner().invoke(main, args, catch_exceptions=False)
-    return result.exit_code, result.stdout
 
 
 def _indexes(fake_word):
@@ -125,22 +115,3 @@ def test_exec_mark_then_insert_index(fake_word):
 
 
 # --- CLI -----------------------------------------------------------------------
-
-
-def test_cli_mark_index_entry(fake_word):
-    code, out = _invoke(
-        ["--json", "mark-index-entry", "--anchor-id", "range:0-5", "--entry", "topic", "--italic"]
-    )
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["entry"] == "topic"
-    assert _indexes(fake_word).MarkEntry.call_args.args[7] is True  # italic
-
-
-def test_cli_insert_index(fake_word):
-    code, out = _invoke(["--json", "insert-index", "--columns", "3", "--run-in"])
-    assert code == EXIT_OK
-    data = json.loads(out)
-    assert data["applied"]["columns"] == 3
-    assert data["applied"]["run_in"] is True
-    assert _indexes(fake_word).Add.call_args.args[3] == int(WdIndexType.RUNIN)
