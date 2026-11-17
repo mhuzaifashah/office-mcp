@@ -4,8 +4,9 @@ Returns the guide text surfaced by the `guide` read op. Named `_guide` rather
 than `_skill` because the package already ships a `_skill/` data directory
 holding the Markdown files — a module of the same name can't coexist with it.
 
-Two variants ship:
+Variants that ship:
 
+    _skill/wordcom-mcp/SKILL.md      (MCP tool form: read / exec / snapshot / write)
     _skill/wordcom-cli/SKILL.md      (command-reference form)
     _skill/wordcom-python/SKILL.md   (Python-API form)
 """
@@ -16,6 +17,7 @@ from importlib.resources import files
 
 # kind -> installed skill directory name (also the `name:` in each frontmatter).
 SKILLS: dict[str, str] = {
+    "mcp": "wordcom-mcp",
     "cli": "wordcom-cli",
     "python": "wordcom-python",
 }

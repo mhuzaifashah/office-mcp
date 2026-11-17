@@ -51,9 +51,9 @@ def _need(p: dict[str, Any], key: str, command: str) -> Any:
 
 def _read_impl(worker: Worker, command: str, p: dict[str, Any]) -> Any:
     if command == "guide":
-        # The full agent guide (Python-API form: op vocabulary + anchor model).
+        # The agent guide for the MCP tools (anchor model + full op vocabulary).
         # Needs neither Word nor the worker thread.
-        return {"guide": skill_body("python")}
+        return {"guide": skill_body("mcp")}
 
     def job() -> Any:
         with attach() as word:
