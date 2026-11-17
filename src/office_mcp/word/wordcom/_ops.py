@@ -16,6 +16,7 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from ._images import _decode_base64
 from .exceptions import AmbiguousMatchError, OpError, WordcomError
 
 if TYPE_CHECKING:
@@ -715,7 +716,8 @@ def apply_op(doc: Document, op: dict[str, Any]) -> dict[str, Any] | None:
     elif kind == "insert_image":
         if ("path" in op) == ("base64" in op):
             raise OpError("op 'insert_image' requires exactly one of 'path' or 'base64'")
-        image: str | Path = Path(op["path"]) if "path" in op else op["base64"]
+        # `base64` is always decoded as data, never probed as a filesystem path.
+        image: bytes | Path = Path(op["path"]) if "path" in op else _decode_base64(op["base64"])
         kwargs = {
             k: op[k] for k in ("block", "width", "height", "alt_text", "lock_aspect") if k in op
         }
@@ -830,7 +832,9 @@ def apply_op(doc: Document, op: dict[str, Any]) -> dict[str, Any] | None:
         elif kind == "replace_shape_image":
             if ("path" in op) == ("base64" in op):
                 raise OpError("op 'replace_shape_image' requires exactly one of 'path' or 'base64'")
-            repl_image: str | Path = Path(op["path"]) if "path" in op else op["base64"]
+            repl_image: bytes | Path = (
+                Path(op["path"]) if "path" in op else _decode_base64(op["base64"])
+            )
             anchor.replace_image(repl_image)
         elif kind == "ungroup_shape":
             members = anchor.ungroup()

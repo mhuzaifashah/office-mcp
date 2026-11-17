@@ -67,6 +67,36 @@ def reject_nonlocal_image_path(raw: str | os.PathLike[str]) -> None:
         )
 
 
+def reject_nonlocal_path(raw: str | os.PathLike[str], *, what: str = "file") -> None:
+    """Raise if `raw` is a UNC or URL/`file://` path. Pure string check, no I/O.
+
+    The general form of `reject_nonlocal_image_path`, for any path the gated
+    surface accepts (save targets, documents to open, theme files). Touching a
+    UNC path at all (`resolve()`, `exists()`, `isfile()`) makes Windows
+    authenticate to the remote host, so this must run before any of those.
+    """
+    s = str(raw)
+    if s.startswith("\\\\") or s.startswith("//"):
+        raise PathNotAllowedError(
+            f"refusing a UNC {what} path ({s!r}): network paths are rejected on the "
+            "gated surface (they can leak credentials); use a local path"
+        )
+    if _SCHEME_RE.match(s):
+        raise PathNotAllowedError(
+            f"refusing a non-local {what} path ({s!r}): URLs and file:// are rejected "
+            "on the gated surface; use a local path"
+        )
+
+
+# Op fields that name a theme / colour-scheme / font-scheme *file* (or a
+# built-in name). A file path there is probed with os.path.isfile.
+_THEME_PATH_FIELDS: dict[str, str] = {
+    "apply_theme": "theme",
+    "set_theme_colors": "scheme",
+    "set_theme_fonts": "scheme",
+}
+
+
 class PathPolicy:
     """Default-deny filesystem policy for the gated dispatch surface.
 
@@ -126,13 +156,16 @@ class PathPolicy:
         inside one of the configured save directories. An empty whitelist raises
         unconditionally — saving is off until an operator opts in.
         """
-        resolved = Path(target).expanduser().resolve()
+        # Both checks are pure string/config checks and must precede resolve():
+        # resolving a UNC path already contacts the remote host.
+        reject_nonlocal_path(target, what="save target")
         if not self._save_dirs:
             raise PathNotAllowedError(
                 f"saving is disabled: no save directories are configured "
                 f"(set WORDCOM_SAVE_DIRS or pass save_dirs= to WordController) — "
                 f"refused {str(target)!r}"
             )
+        resolved = Path(target).expanduser().resolve()
         for d in self._save_dirs:
             if resolved == d or resolved.is_relative_to(d):
                 return resolved
@@ -171,9 +204,11 @@ class PathPolicy:
         alone). Ops are screened in order; the first bad path raises.
         """
         for op in ops:
-            if (
-                isinstance(op, dict)
-                and op.get("op") == "insert_image"
-                and op.get("path") is not None
-            ):
+            if not isinstance(op, dict):
+                continue
+            kind = op.get("op")
+            if kind in ("insert_image", "replace_shape_image") and op.get("path") is not None:
                 self.screen_image_path(op["path"])
+            field = _THEME_PATH_FIELDS.get(str(kind))
+            if field and isinstance(op.get(field), str):
+                reject_nonlocal_path(op[field], what="theme")

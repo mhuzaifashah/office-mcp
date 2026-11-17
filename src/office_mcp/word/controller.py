@@ -40,7 +40,7 @@ from wordcom._dispatch import (  # noqa: E402
     _snapshot_impl,
     _write_impl,
 )
-from wordcom._paths import PathPolicy  # noqa: E402
+from wordcom._paths import PathPolicy, reject_nonlocal_path  # noqa: E402
 from wordcom._worker import ComWorker  # noqa: E402
 from wordcom.exceptions import WordNotRunningError  # noqa: E402
 
@@ -102,6 +102,9 @@ class WordController:
 
         Returns ``{"success", "name", "path", "already_open"}``.
         """
+        # Before any filesystem probe: exists() on a UNC path authenticates to
+        # the remote host.
+        reject_nonlocal_path(path, what="document")
         resolved = os.path.abspath(os.path.expanduser(path))
         if not os.path.exists(resolved):
             raise FileNotFoundError(f"File not found: {resolved}")
