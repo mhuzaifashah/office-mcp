@@ -69,3 +69,25 @@ class EditScope:
                 pass
 
         self._undo = None
+
+    def rollback(self, doc_com: Any) -> bool:
+        """Undo everything recorded in this (already exited) scope, as one step.
+
+        Only possible when the scope ran as a single custom undo record; without
+        `UndoRecord` (Word < 2010) one `Undo` would revert only the last action,
+        so nothing is undone and `False` is returned. On success the user's
+        Selection is restored to where it was before the scope opened.
+        """
+        if not self._undo_started:
+            return False
+        try:
+            with _com.translate_com_errors():
+                undone = bool(doc_com.Undo(1))
+        except Exception:
+            return False
+        if undone and self._snapshot is not None:
+            try:
+                _selection.restore(self._word, self._snapshot)
+            except Exception:
+                pass
+        return undone

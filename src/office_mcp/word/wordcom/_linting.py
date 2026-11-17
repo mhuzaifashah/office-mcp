@@ -370,6 +370,7 @@ def regularize(
             if failure is not None:
                 exc.failure = failure  # type: ignore[attr-defined]
                 exc.ops_run = result.get("ops_run", 0)  # type: ignore[attr-defined]
+                exc.rolled_back = result.get("rolled_back", False)  # type: ignore[attr-defined]
             raise exc
         report["ops_run"] = result.get("ops_run", 0)
         if result.get("warnings"):

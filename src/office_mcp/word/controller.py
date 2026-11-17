@@ -174,11 +174,19 @@ class WordController:
         label: str | None = None,
         tracked: bool = False,
     ) -> dict[str, Any]:
-        """Apply a batch of ops as a single undo record. Raises on first failure."""
+        """Apply a batch of ops as a single undo record.
+
+        On the first failing op the whole batch is rolled back and the error is
+        raised with the batch result attached: `exc.failure` (index, op, error,
+        type), `exc.ops_run` and `exc.rolled_back`.
+        """
         result, exc = _exec_impl(
             self._worker, ops, doc=doc, label=label, tracked=tracked, policy=self._policy
         )
         if exc is not None:
+            exc.failure = result.get("failure")  # type: ignore[attr-defined]
+            exc.ops_run = result.get("ops_run", 0)  # type: ignore[attr-defined]
+            exc.rolled_back = result.get("rolled_back", False)  # type: ignore[attr-defined]
             raise exc
         return result
 

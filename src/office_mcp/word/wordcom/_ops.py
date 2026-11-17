@@ -1281,7 +1281,10 @@ def run_batch(
     """Apply `ops` to `doc` in one atomic-undo (and optional tracked) scope.
 
     Stops at the first failing op, recording a `failure` dict (its index, the op,
-    the error message and type, plus `matches` for an ambiguous find).
+    the error message and type, plus `matches` for an ambiguous find), then rolls
+    the whole batch back with one `Undo`, so a failed batch leaves the document
+    as it was. `rolled_back` in the result says whether that undo happened (it
+    can't without Word's `UndoRecord`, or when no op had applied yet).
 
     Returns `(result, failure_exc)`:
       - `result` is `{"ok", "ops_run", "label", "failure"?}`, always present and
@@ -1290,7 +1293,7 @@ def run_batch(
         the caller can map it to the right error code
         (re-raise it after emitting `result`).
 
-    The successful prefix of ops still rolls back as one undo step.
+    A successful batch is one undo step (one Ctrl-Z reverts all of it).
     """
     ops_run = 0
     outputs: list[dict[str, Any]] = []
@@ -1301,7 +1304,7 @@ def run_batch(
     failure_exc: WordcomError | None = None
     failure_meta: dict[str, Any] | None = None
     tracking = doc.tracked_changes() if tracked else nullcontext()
-    with tracking, doc.edit(label):
+    with tracking, doc.edit(label) as scope:
         for i, op in enumerate(ops):
             try:
                 out = apply_op(doc, _resolve_op_refs(op, results_by_index))
@@ -1345,7 +1348,16 @@ def run_batch(
         return result, None
 
     assert failure_meta is not None  # set together with failure_exc
-    result = {"ok": False, "ops_run": ops_run, "label": label, "failure": failure_meta}
+    # The undo record is closed now; revert the applied prefix (and anything the
+    # failing op half-did) so the caller can fix the op and resend the batch.
+    rolled_back = scope.rollback(doc.com) if ops_run > 0 else False
+    result = {
+        "ok": False,
+        "ops_run": ops_run,
+        "label": label,
+        "failure": failure_meta,
+        "rolled_back": rolled_back,
+    }
     if warnings:
         result["warnings"] = warnings
     return result, failure_exc
