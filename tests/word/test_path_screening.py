@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from office_mcp.word.wordcom import _ops
-from office_mcp.word.wordcom._paths import PathPolicy, reject_nonlocal_path
 from office_mcp.word.wordcom.exceptions import PathNotAllowedError
+from office_mcp.word.wordcom.runtime import _ops
+from office_mcp.word.wordcom.runtime._paths import PathPolicy, reject_nonlocal_path
 
 UNC = "\\\\attacker\\share\\x.png"
 
@@ -66,7 +66,7 @@ def test_builtin_theme_names_pass():
 def test_base64_field_is_decoded_not_probed(fake_word, monkeypatch, kind):
     """A `base64` value that is really a path must never reach is_file()."""
     from office_mcp.word import wordcom
-    from office_mcp.word.wordcom._ops import run_batch
+    from office_mcp.word.wordcom.runtime._ops import run_batch
 
     probed: list[str] = []
     real_is_file = Path.is_file

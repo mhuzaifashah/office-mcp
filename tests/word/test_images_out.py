@@ -14,7 +14,7 @@ import base64
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom import _images
+from office_mcp.word.wordcom.content import _images
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, ImageSourceError, OpError
 
 _SEED_BYTES = b"\x89PNG\r\n\x1a\nSEEDED"

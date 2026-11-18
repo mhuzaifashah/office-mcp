@@ -9,8 +9,8 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 
 def _make_app(**kwargs):
@@ -49,7 +49,7 @@ def test_internal_link_sub_address(monkeypatch):
     app = _make_app(
         hyperlinks=[{"text": "See Risks", "sub_address": "Risks", "start": 5, "end": 9}],
     )
-    from office_mcp.word.wordcom import _com
+    from office_mcp.word.wordcom.runtime import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -157,8 +157,8 @@ def test_op_set_hyperlink_no_fields_fails(fake_word):
 
 def test_mcp_hyperlinks(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _read_impl
-    from office_mcp.word.wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     rows = _read_impl(InlineWorker(), "hyperlinks", {})
     assert rows[0]["text"] == "Acme"
@@ -166,7 +166,7 @@ def test_mcp_hyperlinks(fake_word):
 
 def test_mcp_set_hyperlink_aliases_url(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
 
     # MCP vocabulary parity: url -> address, bookmark -> sub_address.
     op = _build_write_op("set_hyperlink", {"index": 1, "url": "https://m.example"})
@@ -177,7 +177,7 @@ def test_mcp_set_hyperlink_aliases_url(fake_word):
 
 def test_mcp_set_hyperlink_no_fields_raises(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
 
     with pytest.raises(OpError):
         _build_write_op("set_hyperlink", {"index": 1})

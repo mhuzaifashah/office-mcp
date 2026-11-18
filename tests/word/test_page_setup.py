@@ -10,9 +10,9 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.constants import WdOrientation, WdPaperSize
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 
 def _ps(fake_word, section: int = 1):

@@ -13,9 +13,9 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom import _snapshot
 from office_mcp.word.wordcom.constants import WdExportFormat, WdExportItem, WdExportRange
 from office_mcp.word.wordcom.exceptions import OpError, SnapshotError
+from office_mcp.word.wordcom.render import _snapshot
 
 
 @pytest.fixture

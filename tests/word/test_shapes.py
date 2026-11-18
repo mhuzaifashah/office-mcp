@@ -16,9 +16,9 @@ import base64
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._dispatch import _build_write_op, _read_impl, _write_impl
-from office_mcp.word.wordcom._worker import InlineWorker
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
+from office_mcp.word.wordcom.runtime._dispatch import _build_write_op, _read_impl, _write_impl
+from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
 # A 1x1 transparent PNG (same as test_images).
 _PNG = base64.b64decode(
@@ -41,7 +41,7 @@ def png_file(tmp_path):
 
 
 def test_insert_text_box_returns_shape_anchor(fake_word):
-    from office_mcp.word.wordcom._anchors import ShapeAnchor
+    from office_mcp.word.wordcom.model._anchors import ShapeAnchor
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -56,7 +56,7 @@ def test_insert_text_box_returns_shape_anchor(fake_word):
 
 
 def test_insert_image_floating_returns_shape_anchor(fake_word, png_file):
-    from office_mcp.word.wordcom._anchors import ShapeAnchor
+    from office_mcp.word.wordcom.model._anchors import ShapeAnchor
 
     with wordcom.attach() as word:
         doc = word.documents.active

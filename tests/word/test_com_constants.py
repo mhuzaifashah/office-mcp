@@ -56,7 +56,7 @@ def test_enum_matches_office_reference(member, expected):
 
 
 def test_wrap_names_round_trip():
-    from office_mcp.word.wordcom._shapes import WRAP_NAMES, WRAP_TO_NAME
+    from office_mcp.word.wordcom.content._shapes import WRAP_NAMES, WRAP_TO_NAME
 
     assert WRAP_TO_NAME[3] == "front"
     assert WRAP_TO_NAME[4] == "top-bottom"

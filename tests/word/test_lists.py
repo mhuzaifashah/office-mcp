@@ -105,7 +105,7 @@ def test_apply_list_format_multi_level_mints_outline(fake_word):
 def test_configure_level_outline_no_format_keeps_default(fake_word):
     # LISTS-6: a multi-level number level with no explicit `format` keeps Word's
     # built-in per-level outline default rather than overriding it with "%N.".
-    from office_mcp.word.wordcom._lists import _configure_level
+    from office_mcp.word.wordcom.model._lists import _configure_level
 
     lt = fake_word.ActiveDocument.ListTemplates.Add(OutlineNumbered=True)
     lvl = lt.ListLevels(3)

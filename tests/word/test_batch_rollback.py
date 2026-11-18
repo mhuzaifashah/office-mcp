@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 GOOD = {"op": "insert_break", "anchor_id": "bookmark:Address", "kind": "page"}
 BAD = {"op": "insert_break", "kind": "page"}  # no anchor_id

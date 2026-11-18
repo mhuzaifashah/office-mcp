@@ -15,8 +15,10 @@ from types import SimpleNamespace
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom import Checkpoint, _com, _findreplace
-from office_mcp.word.wordcom._checkpoint import (
+from office_mcp.word.wordcom import Checkpoint
+from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.review import _findreplace
+from office_mcp.word.wordcom.review._checkpoint import (
     _SIM_PAIR_CAP,
     _change_hash,
     _pair_replace,
@@ -24,7 +26,7 @@ from office_mcp.word.wordcom._checkpoint import (
     _table_fingerprints,
     diff_checkpoints,
 )
-from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.runtime import _com
 
 
 def _mk_cp(paras, tables=None, *, include="text+style", styles=None, fmts=None):

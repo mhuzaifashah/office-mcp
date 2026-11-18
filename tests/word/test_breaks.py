@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.constants import WdBreakType, WdLineSpacing
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 # ---------------------------------------------------------------------------
 # insert_break — the anchor verb
@@ -173,7 +173,7 @@ def test_exec_format_paragraph_pagination_flags(fake_word):
 
 
 def test_coerce_line_spacing_variants():
-    from office_mcp.word.wordcom._anchors import _coerce_line_spacing
+    from office_mcp.word.wordcom.model._anchors import _coerce_line_spacing
 
     # A number is a multiple of single spacing (rule MULTIPLE, value × 12pt).
     assert _coerce_line_spacing(1.5) == (int(WdLineSpacing.MULTIPLE), 18.0)

@@ -10,7 +10,7 @@ others round-trip in the fake.
 from __future__ import annotations
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom import _com
+from office_mcp.word.wordcom.runtime import _com
 
 
 def _attach(monkeypatch, app):
@@ -139,8 +139,8 @@ def test_regularize_attaches_run_batch_failure_detail(fake_word, monkeypatch):
     # raised error rather than being dropped (so the caller sees which fix failed).
     import pytest
 
-    from office_mcp.word.wordcom import _ops as ops_mod
     from office_mcp.word.wordcom.exceptions import OpError
+    from office_mcp.word.wordcom.runtime import _ops as ops_mod
 
     failure = {"index": 0, "op": {"op": "format_run"}, "error": "boom", "type": "OpError"}
 
@@ -236,7 +236,7 @@ def test_regularize_multiple_rules_ride_one_undo(fake_word):
 
 
 def test_regularize_exec_op_returns_report(fake_word):
-    from office_mcp.word.wordcom._ops import run_batch
+    from office_mcp.word.wordcom.runtime._ops import run_batch
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -259,8 +259,8 @@ def test_mcp_read_lint_and_format_info(fake_word):
     import pytest
 
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _read_impl
-    from office_mcp.word.wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     w = InlineWorker()
     findings = _read_impl(w, "lint", {"rules": ["heading-keep-with-next"]})
@@ -273,8 +273,8 @@ def test_mcp_write_regularize(fake_word):
     import pytest
 
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _write_impl
-    from office_mcp.word.wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+    from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     out = _write_impl(InlineWorker(), "regularize", {"rules": ["heading-keep-with-next"]})
     assert out["ok"] is True

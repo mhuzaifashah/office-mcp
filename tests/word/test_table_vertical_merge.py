@@ -9,7 +9,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from office_mcp.word.wordcom._tables import Table
+from office_mcp.word.wordcom.content._tables import Table
 from tests.word.conftest import _make_range
 
 

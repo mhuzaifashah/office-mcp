@@ -9,9 +9,9 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.constants import WdAutoFitBehavior
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 
 def _table_com(fake_word):
@@ -95,8 +95,8 @@ def test_op_autofit_defaults_content(fake_word):
 
 def test_mcp_table_autofit(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _write_impl
-    from office_mcp.word.wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+    from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     r = _write_impl(InlineWorker(), "table", {"action": "autofit", "table": 1, "mode": "fixed"})
     assert r["ok"]

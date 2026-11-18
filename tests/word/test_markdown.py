@@ -7,8 +7,15 @@ Inline-span correctness lives in test_runs.py; visible Word formatting in smoke.
 
 from __future__ import annotations
 
-from office_mcp.word.wordcom._anchors import _markdown_segments
-from office_mcp.word.wordcom._markdown import BULLET, HEADING, NORMAL, NUMBER, Block, parse_markdown
+from office_mcp.word.wordcom.content._markdown import (
+    BULLET,
+    HEADING,
+    NORMAL,
+    NUMBER,
+    Block,
+    parse_markdown,
+)
+from office_mcp.word.wordcom.model._anchors import _markdown_segments
 
 
 def _kinds(md: str) -> list[tuple[str, str, int | None]]:

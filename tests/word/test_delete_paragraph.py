@@ -11,8 +11,8 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch, validate_op
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch, validate_op
 
 # --- the Document method -------------------------------------------------------
 

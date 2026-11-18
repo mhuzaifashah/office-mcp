@@ -13,8 +13,6 @@ from unittest.mock import call
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._format import to_bgr
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.constants import (
     WdDropPosition,
     WdLineStyle,
@@ -22,6 +20,8 @@ from office_mcp.word.wordcom.constants import (
     WdTabLeader,
 )
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.model._format import to_bgr
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 
 def _addr_range(fake_word):
@@ -304,7 +304,7 @@ def test_exec_drop_cap(fake_word):
 
 
 def test_mcp_build_drop_cap_op():
-    from office_mcp.word.wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
 
     op = _build_write_op(
         "drop_cap", {"anchor_id": "para:2", "position": "margin", "lines": 3, "font": "Georgia"}

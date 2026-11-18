@@ -8,7 +8,7 @@ emphasis/links/images, and blank-line collapse. The COM document-walk
 
 from __future__ import annotations
 
-from office_mcp.word.wordcom._export import (
+from office_mcp.word.wordcom.render._export import (
     BULLET,
     HEADING,
     IMAGE,

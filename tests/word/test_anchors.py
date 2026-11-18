@@ -15,7 +15,7 @@ def test_anchor_abstract_base_cannot_be_instantiated():
     Subclasses missing `_range` or `set_text` now fail at construction time
     with a clear TypeError, not silently until the first call.
     """
-    from office_mcp.word.wordcom._anchors import Anchor
+    from office_mcp.word.wordcom.model._anchors import Anchor
 
     with pytest.raises(TypeError, match=r"abstract"):
         Anchor(None, "x")  # type: ignore[abstract,arg-type]
@@ -24,7 +24,7 @@ def test_anchor_abstract_base_cannot_be_instantiated():
 def test_anchor_subclass_missing_method_fails_at_construction():
     """A would-be Anchor that forgets to override `set_text` must fail when
     instantiated, not at call site."""
-    from office_mcp.word.wordcom._anchors import Anchor
+    from office_mcp.word.wordcom.model._anchors import Anchor
 
     class IncompleteAnchor(Anchor):
         # _range overridden, but set_text intentionally omitted
@@ -65,7 +65,7 @@ def test_bookmark_list_hides_word_internal_bookmarks(monkeypatch):
         },
     )
     app = _make_application([doc_com])
-    from office_mcp.word.wordcom import _com as _com_module
+    from office_mcp.word.wordcom.runtime import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
@@ -190,7 +190,7 @@ def test_content_control_empty_name_does_not_match_untitled_cc(fake_word, monkey
         ],
     )
     app = _make_application([doc_com])
-    from office_mcp.word.wordcom import _com as _com_module
+    from office_mcp.word.wordcom.runtime import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
@@ -472,7 +472,7 @@ def test_heading_section_range_when_heading_is_last_paragraph(monkeypatch):
         content="Body\rLast\r",
     )
     app = _make_application([doc_com])
-    from office_mcp.word.wordcom import _com as _com_module
+    from office_mcp.word.wordcom.runtime import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
@@ -501,7 +501,7 @@ def test_heading_section_text_stops_at_same_level(fake_word, monkeypatch):
         content="Introduction\rBody 1\rConclusion\rBody 2\r",
     )
     app = _make_application([doc_com])
-    from office_mcp.word.wordcom import _com as _com_module
+    from office_mcp.word.wordcom.runtime import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 

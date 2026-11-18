@@ -11,9 +11,9 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.constants import WdContentControlType
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 
 def _make_app(**kwargs):
@@ -38,7 +38,7 @@ def _dropdown_app(monkeypatch, items=("High", "Low")):
         content="Hello\r",
         paragraphs=[{"level": 10, "text": "Hello", "start": 0, "end": 5}],
     )
-    from office_mcp.word.wordcom import _com
+    from office_mcp.word.wordcom.runtime import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -158,7 +158,7 @@ def test_op_set_cc_on_wrong_anchor_fails(fake_word):
 
 def test_mcp_build_set_cc_properties(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
 
     op = _build_write_op("set_cc_properties", {"anchor_id": "cc:Signatory", "title": "Z"})
     assert op == {"op": "set_cc_properties", "anchor_id": "cc:Signatory", "title": "Z"}
@@ -166,7 +166,7 @@ def test_mcp_build_set_cc_properties(fake_word):
 
 def test_mcp_build_set_cc_properties_no_fields_raises(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
 
     with pytest.raises(OpError):
         _build_write_op("set_cc_properties", {"anchor_id": "cc:Signatory"})
@@ -174,7 +174,7 @@ def test_mcp_build_set_cc_properties_no_fields_raises(fake_word):
 
 def test_mcp_build_set_cc_items(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
 
     op = _build_write_op("set_cc_items", {"anchor_id": "cc:Priority", "items": ["a", "b"]})
     assert op == {"op": "set_cc_items", "anchor_id": "cc:Priority", "items": ["a", "b"]}

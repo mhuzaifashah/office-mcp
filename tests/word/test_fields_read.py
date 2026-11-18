@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._fields import field_kind
+from office_mcp.word.wordcom.content._fields import field_kind
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError
 
 
@@ -63,7 +63,7 @@ def test_ref_field_kind(monkeypatch):
     app = _make_app(
         fields=[{"code": "REF Risks \\h", "result": "Risks", "type": 3, "start": 5, "end": 6}],
     )
-    from office_mcp.word.wordcom import _com
+    from office_mcp.word.wordcom.runtime import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -87,8 +87,8 @@ def test_index_out_of_range(fake_word):
 
 def test_mcp_fields(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _read_impl
-    from office_mcp.word.wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     rows = _read_impl(InlineWorker(), "fields", {})
     assert rows[0]["kind"] == "PAGE"

@@ -12,7 +12,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._revisions import segment_runs
+from office_mcp.word.wordcom.review._revisions import segment_runs
 
 # --- segment_runs (pure) -------------------------------------------------------
 #

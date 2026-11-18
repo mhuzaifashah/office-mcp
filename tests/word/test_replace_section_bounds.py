@@ -8,7 +8,7 @@ Covers two COM behaviours the generic fake doesn't model on its own:
 from __future__ import annotations
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom import _com as _com_module
+from office_mcp.word.wordcom.runtime import _com as _com_module
 from tests.word.conftest import _make_application, _make_document
 
 

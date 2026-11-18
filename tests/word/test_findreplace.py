@@ -5,12 +5,12 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._findreplace import find_matches, normalized_equal
 from office_mcp.word.wordcom.exceptions import (
     AmbiguousMatchError,
     AnchorNotFoundError,
     ReplaceVerificationError,
 )
+from office_mcp.word.wordcom.review._findreplace import find_matches, normalized_equal
 
 # ---------------------------------------------------------------------------
 # Normalization + match math (pure, no fake-COM needed)

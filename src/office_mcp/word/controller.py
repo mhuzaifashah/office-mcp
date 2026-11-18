@@ -10,10 +10,10 @@ dispatch entry points reuse the vendored op-dispatch impls verbatim
 (`wordcom/_dispatch.py`, relocated out of upstream's `mcp/server.py` with the
 FastMCP shell stripped):
 
-    read(command, **params)   -> wordcom._dispatch._read_impl     (introspection)
-    write(command, **params)  -> wordcom._dispatch._write_impl    (one op, atomic undo)
-    exec(ops, ...)            -> wordcom._dispatch._exec_impl      (batch, one undo)
-    snapshot(...)             -> wordcom._dispatch._snapshot_impl  (page/anchor -> PNG)
+    read(command, **params)   -> wordcom.runtime._dispatch._read_impl     (introspection)
+    write(command, **params)  -> wordcom.runtime._dispatch._write_impl    (one op, atomic undo)
+    exec(ops, ...)            -> wordcom.runtime._dispatch._exec_impl      (batch, one undo)
+    snapshot(...)             -> wordcom.runtime._dispatch._snapshot_impl  (page/anchor -> PNG)
 
 The op param shapes are exactly those documented by upstream `wordcom` (and its
 `_skill/` SKILL.md guides). Server/tool layers are built on top of this class.
@@ -24,16 +24,16 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from .wordcom import _com
-from .wordcom._dispatch import (
+from .wordcom.exceptions import WordNotRunningError
+from .wordcom.runtime import _com
+from .wordcom.runtime._dispatch import (
     _exec_impl,
     _read_impl,
     _snapshot_impl,
     _write_impl,
 )
-from .wordcom._paths import PathPolicy, reject_nonlocal_path
-from .wordcom._worker import ComWorker, call_timeout_from_env
-from .wordcom.exceptions import WordNotRunningError
+from .wordcom.runtime._paths import PathPolicy, reject_nonlocal_path
+from .wordcom.runtime._worker import ComWorker, call_timeout_from_env
 
 __all__ = ["WordController"]
 

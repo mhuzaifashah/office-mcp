@@ -2391,7 +2391,7 @@ def _make_document(
     doc.ApplyDocumentTheme = MagicMock(name="ApplyDocumentTheme")
     # The theme code derives the built-in library dir from app.Path/Version;
     # give them real strings (the derived dir won't exist — built-in name
-    # resolution tests monkeypatch wordcom._themes._themes_dir).
+    # resolution tests monkeypatch wordcom.model._themes._themes_dir).
     doc.Application.Path = r"C:\Office\root\Office16"
     doc.Application.Version = "16.0"
 
@@ -2496,7 +2496,7 @@ def fake_word(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     )
     app = _make_application([doc])
 
-    from office_mcp.word.wordcom import _com
+    from office_mcp.word.wordcom.runtime import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -2506,8 +2506,8 @@ def fake_word(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 @pytest.fixture
 def no_word(monkeypatch: pytest.MonkeyPatch) -> None:
     """Simulate Word not running."""
-    from office_mcp.word.wordcom import _com
     from office_mcp.word.wordcom.exceptions import WordNotRunningError
+    from office_mcp.word.wordcom.runtime import _com
 
     def _raise(*args: Any, **kwargs: Any) -> None:
         raise WordNotRunningError("no running Microsoft Word instance found")

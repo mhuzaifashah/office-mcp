@@ -13,11 +13,11 @@ from typing import Any
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._anchors import RangeAnchor
-from office_mcp.word.wordcom._dispatch import _write_impl
-from office_mcp.word.wordcom._ops import run_batch
-from office_mcp.word.wordcom._worker import InlineWorker
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.model._anchors import RangeAnchor
+from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+from office_mcp.word.wordcom.runtime._ops import run_batch
+from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
 W = InlineWorker()
 

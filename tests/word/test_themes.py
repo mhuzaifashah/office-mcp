@@ -4,7 +4,7 @@
 `doc.DocumentTheme` is a `_FakeOfficeTheme`: `ThemeColorScheme.Colors(i).RGB` is a
 settable BGR int, `ThemeFontScheme.Major/MinorFont.Item(1).Name` is settable, and
 `Load`/`ApplyDocumentTheme` are recording MagicMocks. Built-in *name* resolution
-is exercised by monkeypatching `wordcom._themes._themes_dir` onto a tmp library.
+is exercised by monkeypatching `wordcom.model._themes._themes_dir` onto a tmp library.
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ import os
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._format import bgr_to_hex, to_bgr
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.exceptions import OpError
+from office_mcp.word.wordcom.model._format import bgr_to_hex, to_bgr
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 
 def _theme(fake_word):
@@ -121,7 +121,7 @@ def test_set_colors_scheme_path_loads(fake_word, tmp_path):
 
 def test_set_colors_builtin_scheme_name(fake_word, tmp_path, monkeypatch):
     lib = _make_library(tmp_path)
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: lib)
+    monkeypatch.setattr(wordcom.model._themes, "_themes_dir", lambda app: lib)
     with wordcom.attach() as word:
         doc = word.documents.active
         with doc.edit("theme"):
@@ -140,7 +140,7 @@ def test_set_colors_unknown_color_raises(fake_word):
 
 def test_set_colors_unknown_scheme_raises(fake_word, tmp_path, monkeypatch):
     lib = _make_library(tmp_path)
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: lib)
+    monkeypatch.setattr(wordcom.model._themes, "_themes_dir", lambda app: lib)
     with wordcom.attach() as word:
         doc = word.documents.active
         with pytest.raises(OpError):
@@ -186,7 +186,7 @@ def test_apply_theme_path(fake_word, tmp_path):
 
 def test_apply_theme_builtin_name(fake_word, tmp_path, monkeypatch):
     lib = _make_library(tmp_path)
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: lib)
+    monkeypatch.setattr(wordcom.model._themes, "_themes_dir", lambda app: lib)
     with wordcom.attach() as word:
         doc = word.documents.active
         with doc.edit("theme"):
@@ -199,7 +199,7 @@ def test_apply_theme_builtin_name(fake_word, tmp_path, monkeypatch):
 
 def test_apply_theme_unknown_raises(fake_word, tmp_path, monkeypatch):
     lib = _make_library(tmp_path)
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: lib)
+    monkeypatch.setattr(wordcom.model._themes, "_themes_dir", lambda app: lib)
     with wordcom.attach() as word:
         doc = word.documents.active
         with pytest.raises(OpError):
@@ -211,7 +211,7 @@ def test_apply_theme_unknown_raises(fake_word, tmp_path, monkeypatch):
 
 def test_list_available(fake_word, tmp_path, monkeypatch):
     lib = _make_library(tmp_path)
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: lib)
+    monkeypatch.setattr(wordcom.model._themes, "_themes_dir", lambda app: lib)
     with wordcom.attach() as word:
         data = word.documents.active.theme.list_available()
     assert data["themes"] == ["Facet", "Ion"]
@@ -220,7 +220,7 @@ def test_list_available(fake_word, tmp_path, monkeypatch):
 
 
 def test_list_available_missing_dir(fake_word, monkeypatch):
-    monkeypatch.setattr(wordcom._themes, "_themes_dir", lambda app: r"Z:\nope")
+    monkeypatch.setattr(wordcom.model._themes, "_themes_dir", lambda app: r"Z:\nope")
     with wordcom.attach() as word:
         data = word.documents.active.theme.list_available()
     assert data == {"themes": [], "color_schemes": [], "font_schemes": []}

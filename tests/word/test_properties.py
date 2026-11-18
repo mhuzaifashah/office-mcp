@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 
 from office_mcp.word import wordcom
-from office_mcp.word.wordcom._ops import run_batch
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
+from office_mcp.word.wordcom.runtime._ops import run_batch
 
 # --- the reader ----------------------------------------------------------------
 
@@ -110,8 +110,8 @@ def test_op_set_and_delete_property(fake_word):
 
 def test_mcp_properties(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom._dispatch import _read_impl, _write_impl
-    from office_mcp.word.wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom.runtime._dispatch import _read_impl, _write_impl
+    from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     w = InlineWorker()
     data = _read_impl(w, "properties", {})

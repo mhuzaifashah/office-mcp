@@ -40,7 +40,7 @@ def test_paragraphs_list_surfaces_style_names(fake_word, monkeypatch):
         content="Accomplishments\rShipped v2\rA closing note.\r",
     )
     app = _make_application([doc_com])
-    from office_mcp.word.wordcom import _com as _com_module
+    from office_mcp.word.wordcom.runtime import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
