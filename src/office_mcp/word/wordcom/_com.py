@@ -13,6 +13,10 @@ from typing import Any
 from .exceptions import WordNotRunningError, from_com_error
 
 _WORD_PROG_ID = "Word.Application"
+# Word.Application's CLSID, as it appears in its ROT item-moniker display name.
+_WORD_APP_CLSID = "{000209FF-0000-0000-C000-000000000046}"
+# File monikers of documents Word can hold open.
+_WORD_DOC_SUFFIXES = (".docx", ".doc", ".docm", ".dotx", ".dotm", ".dot", ".rtf")
 
 
 @contextmanager
@@ -75,11 +79,24 @@ def get_active_word() -> Any:
     raise WordNotRunningError("no running Microsoft Word instance found")
 
 
+def _is_word_app(com_obj: Any) -> bool:
+    """Whether a dispatched COM object is Word's Application (not Visio, Excel, …)."""
+    try:
+        return "word" in str(com_obj.Name).lower()
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _find_word_with_docs() -> Any | None:
     """Scan the Running Object Table for a Word.Application that has open docs.
 
-    Returns the Application COM object, or None if none is found. Best-effort:
-    any per-entry failure is swallowed so one bad moniker can't abort the scan.
+    Returns the Application COM object, or None if none is found. Only two kinds
+    of ROT entry are ever bound: Word's own application entry (its CLSID moniker)
+    and Word document file monikers. Entries from other apps are skipped by
+    display name before anything is dispatched, and a match is confirmed with
+    `Application.Name`, so another Office app exposing `Documents` (Visio) can't
+    be mistaken for Word. Best-effort: any per-entry failure is swallowed so one
+    bad moniker can't abort the scan.
     """
     try:
         import pythoncom  # type: ignore[import-not-found]
@@ -95,8 +112,12 @@ def _find_word_with_docs() -> Any | None:
     except Exception:  # noqa: BLE001
         return None
 
+    def bind(moniker: Any) -> Any:
+        obj = rot.GetObject(moniker)
+        return win32com.client.Dispatch(obj.QueryInterface(pythoncom.IID_IDispatch))
+
+    app_monikers: list[Any] = []
     file_monikers: list[Any] = []
-    # Pass 1: a direct Word.Application ROT entry that already has documents.
     while True:
         try:
             batch = enum.Next(1)
@@ -107,32 +128,28 @@ def _find_word_with_docs() -> Any | None:
         moniker = batch[0]
         try:
             ctx = pythoncom.CreateBindCtx(0)  # type: ignore[call-arg]  # stub omits reserved arg
-            name = moniker.GetDisplayName(ctx, None)
-            obj = rot.GetObject(moniker)
-            dispatch = obj.QueryInterface(pythoncom.IID_IDispatch)
-            com_obj = win32com.client.Dispatch(dispatch)
-            if hasattr(com_obj, "Documents") and hasattr(com_obj, "ActiveDocument"):
-                if com_obj.Documents.Count > 0:
-                    return com_obj
-            if name and name.lower().endswith((".docx", ".doc")):
-                file_monikers.append(moniker)
-        except Exception:  # noqa: BLE001 — still remember file monikers for pass 2
-            try:
-                ctx = pythoncom.CreateBindCtx(0)  # type: ignore[call-arg]  # stub omits reserved arg
-                name = moniker.GetDisplayName(ctx, None)
-                if name and name.lower().endswith((".docx", ".doc")):
-                    file_monikers.append(moniker)
-            except Exception:  # noqa: BLE001
-                pass
+            name = str(moniker.GetDisplayName(ctx, None) or "")
+        except Exception:  # noqa: BLE001
+            continue
+        if _WORD_APP_CLSID in name.upper():
+            app_monikers.append(moniker)
+        elif name.lower().endswith(_WORD_DOC_SUFFIXES):
+            file_monikers.append(moniker)
+
+    # Pass 1: a Word.Application entry that already has documents.
+    for moniker in app_monikers:
+        try:
+            app = bind(moniker)
+            if _is_word_app(app) and app.Documents.Count > 0:
+                return app
+        except Exception:  # noqa: BLE001
+            continue
 
     # Pass 2: a document file moniker → Document COM → its parent Application.
     for moniker in file_monikers:
         try:
-            obj = rot.GetObject(moniker)
-            dispatch = obj.QueryInterface(pythoncom.IID_IDispatch)
-            doc = win32com.client.Dispatch(dispatch)
-            app = doc.Application
-            if app.Documents.Count > 0:
+            app = bind(moniker).Application
+            if _is_word_app(app) and app.Documents.Count > 0:
                 return app
         except Exception:  # noqa: BLE001
             continue

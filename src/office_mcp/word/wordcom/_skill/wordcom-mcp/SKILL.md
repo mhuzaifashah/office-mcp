@@ -329,7 +329,7 @@ Failures carry a stable `code` and a `retryable` flag:
 | `style_not_found` | unknown style name | check `read("styles")` |
 | `ambiguous_match` | `find_replace` hit several places | add `occurrence: N` or `all: true` |
 | `replace_verification` | a whole-document match inside a table couldn't be verified | scope with `in: "table:N:R:C"` |
-| `word_busy` | a modal dialog is open in Word | **retryable**: wait and retry |
+| `word_busy` | a modal dialog is open in Word, or Word didn't answer within the call timeout | **retryable**: wait and retry |
 | `word_not_running` | Word isn't open | ask the user to open Word |
 | `document_not_found` | no open document with that `doc` name | check `read("status")` |
 | `excel_not_available` | `insert_chart` without Excel | only after Excel is installed |

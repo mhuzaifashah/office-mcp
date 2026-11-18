@@ -41,7 +41,7 @@ from wordcom._dispatch import (  # noqa: E402
     _write_impl,
 )
 from wordcom._paths import PathPolicy, reject_nonlocal_path  # noqa: E402
-from wordcom._worker import ComWorker  # noqa: E402
+from wordcom._worker import ComWorker, call_timeout_from_env  # noqa: E402
 from wordcom.exceptions import WordNotRunningError  # noqa: E402
 
 __all__ = ["WordController"]
@@ -58,6 +58,9 @@ class WordController:
             (non-local UNC/URL forms are always screened regardless). When
             ``None``, read from ``WORDCOM_IMAGE_DIRS``.
 
+    Each Word call waits at most ``WORDCOM_CALL_TIMEOUT`` seconds (default 300;
+    ``0`` = no limit) and then fails with a retryable `WordBusyError`.
+
     The controller never opens or closes Word on its own beyond `ensure_running`;
     the user owns Word's lifecycle.
     """
@@ -68,7 +71,7 @@ class WordController:
         save_dirs: list[str] | None = None,
         image_dirs: list[str] | None = None,
     ) -> None:
-        self._worker = ComWorker()
+        self._worker = ComWorker(timeout=call_timeout_from_env())
         if save_dirs is None and image_dirs is None:
             self._policy = PathPolicy.from_env()
         else:

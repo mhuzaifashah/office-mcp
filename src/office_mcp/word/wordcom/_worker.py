@@ -16,16 +16,36 @@ thread machinery entirely.
 
 from __future__ import annotations
 
+import os
 import queue
 import threading
 from collections.abc import Callable
 from concurrent.futures import Future
+from concurrent.futures import TimeoutError as FutureTimeout
 from typing import Any, Protocol, TypeVar
+
+from .exceptions import WordBusyError
 
 T = TypeVar("T")
 
 # Sentinel pushed onto the queue to stop the worker loop.
 _SHUTDOWN = object()
+
+# How long a caller waits for one Word call before giving up (seconds).
+# Override with WORDCOM_CALL_TIMEOUT; 0 or a negative value waits forever.
+DEFAULT_CALL_TIMEOUT = 300.0
+
+
+def call_timeout_from_env() -> float | None:
+    """The per-call timeout from ``WORDCOM_CALL_TIMEOUT`` (None = no limit)."""
+    raw = os.environ.get("WORDCOM_CALL_TIMEOUT", "").strip()
+    if not raw:
+        return DEFAULT_CALL_TIMEOUT
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_CALL_TIMEOUT
+    return value if value > 0 else None
 
 
 class Worker(Protocol):
@@ -44,7 +64,9 @@ class InlineWorker:
 class ComWorker:
     """Serialises all Word/COM work onto one CoInitialize'd daemon thread."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, timeout: float | None = DEFAULT_CALL_TIMEOUT) -> None:
+        # `timeout` bounds how long `run_on_word` waits; None waits forever.
+        self._timeout = timeout
         self._jobs: queue.Queue[Any] = queue.Queue()
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
@@ -88,11 +110,24 @@ class ComWorker:
                     pass
 
     def run_on_word(self, fn: Callable[[], T]) -> T:
-        """Run `fn` on the worker thread and block until it returns (or raises)."""
+        """Run `fn` on the worker thread and block until it returns (or raises).
+
+        Raises `WordBusyError` (retryable) if Word doesn't answer within the
+        worker's timeout, e.g. because a dialog is blocking it. The call keeps
+        running on the worker; later calls queue behind it until it finishes.
+        """
         self._ensure_started()
         future: Future[T] = Future()
         self._jobs.put((fn, future))
-        return future.result()
+        try:
+            return future.result(timeout=self._timeout)
+        except FutureTimeout:
+            # Not started yet: drop it so it never runs after we've given up.
+            future.cancel()
+            raise WordBusyError(
+                f"Word did not respond within {self._timeout:g}s "
+                "(a dialog may be open, or it is still busy); retry shortly"
+            ) from None
 
     def shutdown(self) -> None:
         """Stop the worker thread (best-effort; the thread is a daemon anyway)."""
