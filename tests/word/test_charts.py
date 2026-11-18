@@ -382,7 +382,7 @@ def test_formatting_vocab_maps_consistent():
 
 
 def test_format_writes_passed_fields_only(fake_word, excel_available):
-    from office_mcp.word.wordcom.model._format import to_bgr
+    from office_mcp.word.wordcom.model._coerce import to_bgr
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -543,7 +543,7 @@ def test_add_trendline_bad_kind_raises(fake_word, excel_available):
 
 
 def test_set_series_color_series_and_point(fake_word, excel_available):
-    from office_mcp.word.wordcom.model._format import to_bgr
+    from office_mcp.word.wordcom.model._coerce import to_bgr
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -698,7 +698,7 @@ def test_format_series_marker_int_passthrough(fake_word, excel_available):
 
 
 def test_format_series_point_explosion_and_label_font(fake_word, excel_available):
-    from office_mcp.word.wordcom.model._format import to_bgr
+    from office_mcp.word.wordcom.model._coerce import to_bgr
 
     with wordcom.attach() as word:
         doc = word.documents.active

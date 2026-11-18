@@ -37,7 +37,7 @@ from ..constants import (
 )
 from ..exceptions import AnchorNotFoundError, OpError
 from ..runtime import _com
-from ._format import to_bgr, to_points
+from ._coerce import to_bgr, to_points
 
 if TYPE_CHECKING:
     from ._anchors import RangeAnchor

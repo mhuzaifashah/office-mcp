@@ -32,7 +32,7 @@ from .wordcom.runtime._dispatch import (
     _snapshot_impl,
     _write_impl,
 )
-from .wordcom.runtime._paths import PathPolicy, reject_nonlocal_path
+from .wordcom.runtime._path_policy import PathPolicy, reject_nonlocal_path
 from .wordcom.runtime._worker import ComWorker, call_timeout_from_env
 
 __all__ = ["WordController"]

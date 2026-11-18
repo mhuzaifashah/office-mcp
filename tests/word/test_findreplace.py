@@ -10,7 +10,7 @@ from office_mcp.word.wordcom.exceptions import (
     AnchorNotFoundError,
     ReplaceVerificationError,
 )
-from office_mcp.word.wordcom.review._findreplace import find_matches, normalized_equal
+from office_mcp.word.wordcom.review._find_replace import find_matches, normalized_equal
 
 # ---------------------------------------------------------------------------
 # Normalization + match math (pure, no fake-COM needed)

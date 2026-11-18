@@ -3,7 +3,7 @@
 wordcom's object-model API is trusted and **ungated** — `doc.save_as(...)` writes
 wherever the caller says. The dispatch surface is different: its inputs come from
 an LLM and can be prompt-injected, so every filesystem path it accepts runs through
-a [`PathPolicy`][wordcom.runtime._paths.PathPolicy] first.
+a [`PathPolicy`][wordcom.runtime._path_policy.PathPolicy] first.
 
 Two boundaries:
 

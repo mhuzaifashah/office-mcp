@@ -18,8 +18,8 @@ It stays idempotent (the read rounds the same way) and is below any visible
 threshold; carrying the unrounded baseline would mean widening the `format_info`
 contract, which isn't worth it for a sub-hundredth-point difference.
 
-This module is imported by `_linting` for its side effect of registering the
-rules; it must not be imported before `_linting` finishes defining `Rule` /
+This module is imported by `_lint` for its side effect of registering the
+rules; it must not be imported before `_lint` finishes defining `Rule` /
 `Finding` / `_register_rule` (it is imported at the bottom of that module).
 """
 
@@ -28,7 +28,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
-from ._linting import Finding, Rule, Span, _overlaps, _register_rule
+from ._lint import Finding, Rule, Span, _overlaps, _register_rule
 
 if TYPE_CHECKING:
     from ..model._document import Document

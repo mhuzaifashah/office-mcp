@@ -22,7 +22,7 @@ from ..constants import WdHeaderFooterIndex, WdOrientation, WdPaperSize
 from ..exceptions import AnchorNotFoundError, OpError
 from ..runtime import _com
 from ._anchors import Anchor, _coerce_named, range_text
-from ._format import to_points
+from ._coerce import to_points
 
 if TYPE_CHECKING:
     from ._document import Document

@@ -12,7 +12,7 @@ import pytest
 from office_mcp.word.wordcom import attach
 from office_mcp.word.wordcom.exceptions import OpError, PathNotAllowedError
 from office_mcp.word.wordcom.runtime._dispatch import _write_impl
-from office_mcp.word.wordcom.runtime._paths import PathPolicy, reject_nonlocal_image_path
+from office_mcp.word.wordcom.runtime._path_policy import PathPolicy, reject_nonlocal_image_path
 from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
 _BS = chr(92)  # a single backslash, unambiguous through every quoting layer

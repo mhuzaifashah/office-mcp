@@ -64,9 +64,9 @@ from .model._anchors import (
     StartAnchor,
     TextBoxCollection,
 )
-from .model._app import Word, attach, connect
+from .model._application import Word, attach, connect
 from .model._document import Document, DocumentCollection
-from .model._edit import EditScope
+from .model._edit_scope import EditScope
 from .model._lists import ListCollection
 from .model._properties import PropertyCollection
 from .model._sections import HeaderFooter, Section, SectionCollection
@@ -74,15 +74,15 @@ from .model._selection import Selection, SelectionSnapshot
 from .model._styles import Style, StyleCollection
 from .model._themes import DocumentTheme
 from .model._variables import VariableCollection
+from .references._authorities import TableOfAuthorities
+from .references._book_index import Index
 from .references._citations import Bibliography, Citation
-from .references._index import Index
 from .references._sources import Source
-from .references._toa import TableOfAuthorities
 from .references._toc import TableOfFigures, Toc
 from .render._snapshot import Snapshot
-from .review._checkpoint import Checkpoint
+from .review._checkpoints import Checkpoint
 from .review._comments import Comment, CommentCollection
-from .review._linting import Finding
+from .review._lint import Finding
 from .review._revisions import Revision, RevisionCollection
 
 __all__ = [

@@ -8,7 +8,7 @@ of `Block` nodes; the emitters and the budgeted elide are **pure functions over
 that node list**, so they are unit-testable off-Windows and Markdown/HTML provably
 agree on structure.
 
-The split mirrors the import side: `_markdown.py` is the pure block classifier and
+The split mirrors the import side: `_markdown_blocks.py` is the pure block classifier and
 `_anchors.insert_markdown` does the COM materialisation. Here `_walk_blocks` is the
 COM half (lives lower in this file, populated in a later slice) and the `render_*`
 functions are the pure half.
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from ..model._anchors import Anchor
     from ..model._document import Document
 
-# Block kinds (mirrors `_markdown`'s flat-constant style).
+# Block kinds (mirrors `_markdown_blocks`'s flat-constant style).
 HEADING = "heading"
 PARAGRAPH = "paragraph"
 BULLET = "bullet"
@@ -128,7 +128,7 @@ def _escape_inline(text: str) -> str:
     Always escapes ``\\`` ` ``*{}[]``; escapes ``#`` only at the very start (where
     it would start a heading) and ``_`` only at word boundaries (so ``snake_case``
     survives). Ported from all2md. The escapes ``\\*`` and ``\\\\`` round-trip back
-    through `_runs.parse_markup` on re-import.
+    through `_inline_runs.parse_markup` on re-import.
     """
     out: list[str] = []
     last = len(text) - 1

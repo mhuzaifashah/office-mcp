@@ -37,8 +37,8 @@ from ..exceptions import (
 from ..references._sources import SourceCollection
 from ..render import _export, _snapshot
 from ..render._snapshot import Snapshot
-from ..review import _checkpoint, _findreplace, _linting, _proofing
-from ..review._checkpoint import Checkpoint
+from ..review import _checkpoints, _find_replace, _lint, _proofing
+from ..review._checkpoints import Checkpoint
 from ..review._comments import CommentCollection
 from ..review._revisions import RevisionCollection
 from ..runtime import _com
@@ -71,8 +71,8 @@ from ._anchors import (
     _within_table,
     paragraph_text,
 )
-from ._edit import EditScope
-from ._format import to_bgr
+from ._coerce import to_bgr
+from ._edit_scope import EditScope
 from ._lists import ListCollection
 from ._properties import PropertyCollection
 from ._sections import SectionCollection
@@ -83,7 +83,7 @@ from ._variables import VariableCollection
 
 if TYPE_CHECKING:
     from ._anchors import Anchor
-    from ._app import Word
+    from ._application import Word
 
 
 def _markup_flag(markup: str) -> bool:
@@ -1276,7 +1276,7 @@ class Document:
         """
         results: list[dict[str, Any]] = []
         for base, haystack in self._scope_segments(scope):
-            for m in _findreplace.find_matches(haystack, text):
+            for m in _find_replace.find_matches(haystack, text):
                 start = base + _utf16_len(haystack[: m.start])
                 end = start + _utf16_len(haystack[m.start : m.end])
                 results.append(
@@ -1354,7 +1354,7 @@ class Document:
                 # — proceed. A non-empty mismatch means the offset map drifted
                 # (table position divergence): refuse rather than corrupt.
                 resolved = str(target.Text or "")
-                if resolved and not _findreplace.normalized_equal(resolved, m["text"]):
+                if resolved and not _find_replace.normalized_equal(resolved, m["text"]):
                     raise ReplaceVerificationError(
                         find, m["text"], resolved, anchor_id=m["anchor_id"]
                     )
@@ -1633,14 +1633,14 @@ class Document:
             raise OpError(f"limit must be >= 1, got {limit}")
         if not 0.0 <= min_score <= 1.0:
             raise OpError(f"min_score must be in [0, 1], got {min_score}")
-        needle = _findreplace._normalize(text).text
+        needle = _find_replace._normalize(text).text
         if not needle:
             return []
         scored: list[dict[str, Any]] = []
         with _com.translate_com_errors():
             for idx, para in enumerate(self._doc.Paragraphs, start=1):
                 raw = paragraph_text(para)
-                hay = _findreplace._normalize(raw).text
+                hay = _find_replace._normalize(raw).text
                 if not hay:
                     continue
                 score = difflib.SequenceMatcher(None, needle, hay).ratio()
@@ -1797,7 +1797,7 @@ class Document:
         Read-only — selection, scroll, and `Saved` are untouched (the layout
         rules repaginate content-neutrally, like [`stats`][wordcom.Document.stats]).
         """
-        return [f.to_dict() for f in _linting.run_lint(self, rules=rules, within=within)]
+        return [f.to_dict() for f in _lint.run_lint(self, rules=rules, within=within)]
 
     def regularize(
         self,
@@ -1822,7 +1822,7 @@ class Document:
         are out of scope here — formatting/structure fixes only. If Track Changes
         is on, the edits are tracked like any other for the user to review.
         """
-        return _linting.regularize(self, rules=rules, within=within, dry_run=dry_run)
+        return _lint.regularize(self, rules=rules, within=within, dry_run=dry_run)
 
     def checkpoint(
         self,
@@ -1849,7 +1849,7 @@ class Document:
         Read-only — walks paragraphs like [`outline`][wordcom.Document.outline],
         touching no selection/scroll and leaving `Saved` untouched.
         """
-        return _checkpoint.build_checkpoint(self, include=include, within=within)
+        return _checkpoints.build_checkpoint(self, include=include, within=within)
 
     def changes_since(self, cp: Checkpoint | str | dict[str, Any]) -> list[dict[str, Any]]:
         """Diff a stored checkpoint against the document **now** — a pure read.
@@ -1861,7 +1861,7 @@ class Document:
         fingerprints are comparable. An unchanged document returns ``[]`` via the
         `doc_hash` fast-path.
         """
-        return _checkpoint.changes_since(self, cp)
+        return _checkpoints.changes_since(self, cp)
 
     def diff(
         self,
@@ -1884,7 +1884,7 @@ class Document:
         Move detection is deferred — a cut-paste surfaces as delete+insert. A pure
         read (the tokens carry the data; Word is not touched).
         """
-        return _checkpoint.diff_checkpoints(cp_a, cp_b)
+        return _checkpoints.diff_checkpoints(cp_a, cp_b)
 
     def _page_of(self, position: int) -> int:
         """1-based page number that document offset `position` falls on."""

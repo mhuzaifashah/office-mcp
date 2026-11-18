@@ -9,7 +9,7 @@ composition over shipped primitives — `format_info` (the format probe),
 Each rule is `consistency` (a direct override fighting the applied style),
 `structural` (an objective layout/structure defect), or `policy` (a value that
 deviates from a configured house-style target — deferred to a later pass). A
-rule emits [`Finding`][wordcom.review._linting.Finding]s; a *fixable* finding carries
+rule emits [`Finding`][wordcom.review._lint.Finding]s; a *fixable* finding carries
 an op-shaped `fix` (literally an `exec` op, or a list of them), so `regularize`
 is "lint, then run each finding's `fix` through the existing `run_batch` loop" —
 the fix path reuses the audited op vocabulary rather than a parallel writer.
@@ -390,4 +390,4 @@ def _register_rule(rule: Rule) -> None:
 
 # Defer consistency-rule registration to keep import order simple; the module is
 # imported for its side effect of extending `_RULES`.
-from ..review import _linting_consistency  # noqa: E402,F401
+from ..review import _lint_consistency  # noqa: E402,F401

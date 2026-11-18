@@ -20,7 +20,7 @@ from ..content._images import _decode_base64
 from ..exceptions import AmbiguousMatchError, OpError, WordcomError
 
 if TYPE_CHECKING:
-    from ..model._app import Word
+    from ..model._application import Word
     from ..model._document import Document
 
 
@@ -911,9 +911,9 @@ def apply_op(doc: Document, op: dict[str, Any]) -> dict[str, Any] | None:
         # findings} report as the op output. `own_undo=False` because the batch's
         # own doc.edit already wraps us — applying fixes via apply_op here avoids a
         # nested UndoRecord. `lint`/`format_info` stay reads (no op).
-        from ..review import _linting
+        from ..review import _lint
 
-        return _linting.regularize(
+        return _lint.regularize(
             doc,
             rules=op.get("rules"),
             within=op.get("within"),

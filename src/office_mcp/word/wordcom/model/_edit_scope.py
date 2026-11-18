@@ -9,7 +9,7 @@ from ..runtime import _com
 from ._selection import SelectionSnapshot
 
 if TYPE_CHECKING:
-    from ._app import Word
+    from ._application import Word
 
 
 class EditScope:

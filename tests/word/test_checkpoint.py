@@ -17,8 +17,8 @@ import pytest
 from office_mcp.word import wordcom
 from office_mcp.word.wordcom import Checkpoint
 from office_mcp.word.wordcom.exceptions import OpError
-from office_mcp.word.wordcom.review import _findreplace
-from office_mcp.word.wordcom.review._checkpoint import (
+from office_mcp.word.wordcom.review import _find_replace
+from office_mcp.word.wordcom.review._checkpoints import (
     _SIM_PAIR_CAP,
     _change_hash,
     _pair_replace,
@@ -37,7 +37,7 @@ def _mk_cp(paras, tables=None, *, include="text+style", styles=None, fmts=None):
     for i, text in enumerate(paras):
         style = (styles or {}).get(i, "Normal")
         fmt = (fmts or {}).get(i)
-        norm = _findreplace._normalize(text).text
+        norm = _find_replace._normalize(text).text
         pgs.append(
             {
                 "i": i,

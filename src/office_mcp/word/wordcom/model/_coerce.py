@@ -3,13 +3,13 @@ border, and tab-stop formatting.
 
 Two pure helpers, no COM:
 
-- [`to_bgr`][wordcom.model._format.to_bgr] turns a colour (named / hex / RGB tuple)
+- [`to_bgr`][wordcom.model._coerce.to_bgr] turns a colour (named / hex / RGB tuple)
   into the **BGR long** integer Word stores. Word's colour properties
   (`Font.Color`, `Shading.BackgroundPatternColor`, `Borders(...).Color`) are an
   `RGB(r, g, b)` value *byte-swapped* — red is `0x0000FF`, not `0xFF0000` — so a
   naive `0xRRGGBB` int comes out with red and blue transposed. Always route a
   colour through here.
-- [`to_points`][wordcom.model._format.to_points] coerces a length to points (Word's
+- [`to_points`][wordcom.model._coerce.to_points] coerces a length to points (Word's
   native unit for sizes, indents, spacing, tab positions). Bare numbers are
   already points; strings carry an explicit unit (`pt`/`in`/`cm`/`mm`).
 
@@ -107,7 +107,7 @@ def to_bgr(value: str | tuple[int, int, int] | list[int]) -> int:
 def bgr_to_hex(value: int) -> str:
     """Render Word's **BGR long** integer back as an ``"#RRGGBB"`` hex string.
 
-    The inverse of [`to_bgr`][wordcom.model._format.to_bgr]. Word stores colours
+    The inverse of [`to_bgr`][wordcom.model._coerce.to_bgr]. Word stores colours
     byte-swapped (red is `0x0000FF`, not `0xFF0000`), so the low byte is red and
     the high byte is blue — e.g. `255` -> `"#FF0000"`, `16711680` -> `"#0000FF"`.
 

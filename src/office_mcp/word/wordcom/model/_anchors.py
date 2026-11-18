@@ -43,7 +43,7 @@ from ..exceptions import AnchorNotFoundError, EquationError, ExcelNotAvailableEr
 from ..model import _lists
 from ..review import _revisions
 from ..runtime import _com
-from ._format import bgr_to_hex, to_bgr, to_points
+from ._coerce import bgr_to_hex, to_bgr, to_points
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1058,7 +1058,7 @@ def _markdown_segments(blocks: list[Any]) -> list[tuple[list[dict[str, Any]], st
     `None`. Normal paragraphs are pinned to the built-in ``Normal`` style so they
     don't inherit a heading style from the insertion point.
     """
-    from ..content._markdown import BULLET, HEADING, NORMAL, NUMBER
+    from ..content._markdown_blocks import BULLET, HEADING, NORMAL, NUMBER
 
     segments: list[tuple[list[dict[str, Any]], str | None]] = []
     i, n = 0, len(blocks)
@@ -1312,7 +1312,7 @@ class Anchor(ABC):
         `StyleNotFoundError` before any text is inserted. Wrap in `doc.edit(...)`
         for atomic undo. Raises `OpError` for a malformed `items` payload.
         """
-        from ._runs import normalize_block_items, runs_to_text
+        from ._inline_runs import normalize_block_items, runs_to_text
 
         if where not in ("before", "after"):
             raise ValueError(f"where must be 'before' or 'after'; got {where!r}")
@@ -1419,7 +1419,7 @@ class Anchor(ABC):
     def insert_markdown(self, md: str, *, where: str = "after") -> RangeAnchor:
         """Insert a constrained-Markdown block as real Word structure, atomically.
 
-        Maps a deliberately tiny block dialect (see `_markdown`) to paragraphs,
+        Maps a deliberately tiny block dialect (see `_markdown_blocks`) to paragraphs,
         headings, and lists: ``#``/``##``/``###`` → `Heading 1/2/3`, ``-``/``*``
         → a bulleted list, ``1.`` → a numbered list, blank-line-separated text →
         `Normal` paragraphs, with inline ``**bold**``/``*italic*`` spans honoured.
@@ -1432,8 +1432,8 @@ class Anchor(ABC):
         this anchor's range. Returns the [`RangeAnchor`][wordcom.RangeAnchor]
         spanning everything inserted. Raises `OpError` for empty markdown.
         """
-        from ..content._markdown import parse_markdown
-        from ._runs import normalize_block_items, runs_to_text
+        from ..content._markdown_blocks import parse_markdown
+        from ._inline_runs import normalize_block_items, runs_to_text
 
         blocks = parse_markdown(md)
         if not blocks:
@@ -2573,7 +2573,7 @@ class Anchor(ABC):
         `where` is ``"after"`` (default) or ``"before"`` this anchor's range.
         Wrap in `doc.edit(...)` for atomic undo. Bad input raises `OpError`.
         """
-        from ..references._index import Index
+        from ..references._book_index import Index
 
         try:
             if where not in ("before", "after"):
@@ -2774,7 +2774,7 @@ class Anchor(ABC):
         The `TA` field is hidden and doesn't disturb the visible flow. Wrap in
         `doc.edit(...)` for atomic undo. Bad input raises `OpError`.
         """
-        from ..references._toa import _TOA_CATEGORIES
+        from ..references._authorities import _TOA_CATEGORIES
 
         try:
             if where not in ("before", "after"):
@@ -2822,7 +2822,7 @@ class Anchor(ABC):
         (default) or ``"before"`` this anchor's range. Wrap in `doc.edit(...)` for
         atomic undo. Bad input raises `OpError`.
         """
-        from ..references._toa import _TOA_CATEGORIES, TableOfAuthorities
+        from ..references._authorities import _TOA_CATEGORIES, TableOfAuthorities
 
         try:
             if where not in ("before", "after"):

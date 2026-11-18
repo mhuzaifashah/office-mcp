@@ -20,7 +20,7 @@ from office_mcp.word.wordcom.constants import (
     WdTabLeader,
 )
 from office_mcp.word.wordcom.exceptions import OpError
-from office_mcp.word.wordcom.model._format import to_bgr
+from office_mcp.word.wordcom.model._coerce import to_bgr
 from office_mcp.word.wordcom.runtime._ops import run_batch
 
 

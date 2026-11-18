@@ -33,7 +33,7 @@ from ._ops import (
     pick_doc,
     run_batch,
 )
-from ._paths import PathPolicy
+from ._path_policy import PathPolicy
 from ._worker import Worker
 
 # ---------------------------------------------------------------------------

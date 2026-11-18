@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from ..runtime import _com
 
 if TYPE_CHECKING:
-    from ._app import Word
+    from ._application import Word
 
 
 @dataclass(frozen=True)

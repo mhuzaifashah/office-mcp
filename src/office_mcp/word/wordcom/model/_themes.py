@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..exceptions import OpError
 from ..runtime import _com
-from ._format import bgr_to_hex, to_bgr
+from ._coerce import bgr_to_hex, to_bgr
 
 if TYPE_CHECKING:
     from ._document import Document

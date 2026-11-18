@@ -9,7 +9,7 @@ import pytest
 
 from office_mcp.word.wordcom.exceptions import PathNotAllowedError
 from office_mcp.word.wordcom.runtime import _ops
-from office_mcp.word.wordcom.runtime._paths import PathPolicy, reject_nonlocal_path
+from office_mcp.word.wordcom.runtime._path_policy import PathPolicy, reject_nonlocal_path
 
 UNC = "\\\\attacker\\share\\x.png"
 

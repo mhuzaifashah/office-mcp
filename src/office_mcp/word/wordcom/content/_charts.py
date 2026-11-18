@@ -41,7 +41,7 @@ from ..constants import (
     XlTrendlineType,
 )
 from ..exceptions import OpError
-from ..model._format import to_bgr
+from ..model._coerce import to_bgr
 
 # Sentinel for "argument not supplied" — lets a formatting field tell "leave
 # untouched" apart from an explicit `None` that means "clear" (e.g. a title).
@@ -352,7 +352,7 @@ def apply_chart_format(
     `title=None` clears the title (omit it to leave it alone — that's what the
     `_UNSET` sentinel distinguishes). `legend_position` implies the legend is
     shown. `chart_style` is the built-in design-gallery int. `background` /
-    `plot_background` and `font_color` accept any [`to_bgr`][wordcom.model._format.to_bgr]
+    `plot_background` and `font_color` accept any [`to_bgr`][wordcom.model._coerce.to_bgr]
     colour; `font` / `font_size` set the whole-chart font. `data_labels` toggles
     point labels on every series; `chart_type` re-types the chart in place.
     `gap_width` / `overlap` tune bar spacing (bar/column charts only); `data_table`
@@ -502,7 +502,7 @@ def format_series(
     curves a line/scatter through its points. `explosion` (0–400) pulls a pie
     slice out. `data_labels` toggles this series' point labels; `data_label_size`
     / `data_label_color` style their font (a colour goes through
-    [`to_bgr`][wordcom.model._format.to_bgr]). When `point` is given, `marker` /
+    [`to_bgr`][wordcom.model._coerce.to_bgr]). When `point` is given, `marker` /
     `explosion` / the data-label font target that single point; `marker_size` /
     `smooth` / the `data_labels` toggle stay series-wide.
     """
@@ -575,7 +575,7 @@ def set_series_color(
 ) -> None:
     """Recolour a whole series, or a single 1-based `point` (a bar / pie slice /
     marker). Sets the fill, and the line/marker colour too where the series has
-    one (line/scatter). `color` is any [`to_bgr`][wordcom.model._format.to_bgr] colour."""
+    one (line/scatter). `color` is any [`to_bgr`][wordcom.model._coerce.to_bgr] colour."""
     bgr = to_bgr(color)
     sc = chart_com.SeriesCollection(int(series))
     target = sc.Points(int(point)) if point is not None else sc

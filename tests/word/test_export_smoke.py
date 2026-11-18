@@ -14,7 +14,7 @@ import contextlib
 
 import pytest
 
-from office_mcp.word.wordcom.content._markdown import parse_markdown
+from office_mcp.word.wordcom.content._markdown_blocks import parse_markdown
 
 pytestmark = pytest.mark.smoke
 

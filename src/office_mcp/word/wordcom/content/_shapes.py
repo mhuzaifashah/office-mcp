@@ -39,7 +39,7 @@ from ..constants import (
     WdWrapType,
 )
 from ..exceptions import OpError
-from ..model._format import to_bgr, to_points
+from ..model._coerce import to_bgr, to_points
 
 # Watermark shapes are named like Word's own feature (mirror Document's prefix).
 _WATERMARK_NAME_PREFIX = "PowerPlusWaterMarkObject"

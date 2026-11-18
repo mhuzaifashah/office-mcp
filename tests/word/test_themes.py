@@ -15,7 +15,7 @@ import pytest
 
 from office_mcp.word import wordcom
 from office_mcp.word.wordcom.exceptions import OpError
-from office_mcp.word.wordcom.model._format import bgr_to_hex, to_bgr
+from office_mcp.word.wordcom.model._coerce import bgr_to_hex, to_bgr
 from office_mcp.word.wordcom.runtime._ops import run_batch
 
 

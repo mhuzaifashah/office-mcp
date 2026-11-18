@@ -17,7 +17,7 @@ from office_mcp.word.wordcom.model._anchors import (
     _read_font,
     _read_paragraph_format,
 )
-from office_mcp.word.wordcom.model._format import to_bgr
+from office_mcp.word.wordcom.model._coerce import to_bgr
 
 
 def _addr_range(fake_word):

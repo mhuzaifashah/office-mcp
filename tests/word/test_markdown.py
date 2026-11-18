@@ -1,13 +1,13 @@
 """Block-Markdown parser — pure, COM-free (like test_runs.py).
 
-Covers `_markdown.parse_markdown` (line → Block classification) and
+Covers `_markdown_blocks.parse_markdown` (line → Block classification) and
 `_anchors._markdown_segments` (grouping Blocks into insert_block segments).
 Inline-span correctness lives in test_runs.py; visible Word formatting in smoke.
 """
 
 from __future__ import annotations
 
-from office_mcp.word.wordcom.content._markdown import (
+from office_mcp.word.wordcom.content._markdown_blocks import (
     BULLET,
     HEADING,
     NORMAL,

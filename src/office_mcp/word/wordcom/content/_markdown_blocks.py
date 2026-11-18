@@ -4,7 +4,7 @@
 real Word paragraphs, headings, and lists in one op. This module does the
 COM-free part: classify each source line into a `Block`. The actual insertion
 (and the inline `**bold**`/`*italic*` parsing, which is reused as-is from
-`_runs.parse_markup`) lives in `_anchors.insert_markdown`.
+`_inline_runs.parse_markup`) lives in `_anchors.insert_markdown`.
 
 The dialect is **a documented subset, not CommonMark** — Word is not Markdown.
 Supported, on its own line:
@@ -16,7 +16,7 @@ Supported, on its own line:
 - a blank line separates paragraphs; consecutive plain lines join into one
   `Normal` paragraph (a soft wrap, CommonMark-style).
 - inline spans (`**bold**`, `*italic*`, `***both***`) are left intact in the
-  block text — `insert_block` runs them through `_runs.parse_markup` downstream.
+  block text — `insert_block` runs them through `_inline_runs.parse_markup` downstream.
 
 Explicitly **out of scope** in v1 (deferred until asked): code fences, nested /
 mixed lists, block quotes, tables, links, images. Anything that isn't a heading,
@@ -24,7 +24,7 @@ list item, or blank line is plain paragraph text — so a stray ``> quote`` or
 ```` ``` ```` fence lands as literal text rather than being silently dropped.
 
 This module is pure and COM-free so the parser is unit-testable off-Windows,
-mirroring `_runs.py`.
+mirroring `_inline_runs.py`.
 """
 
 from __future__ import annotations

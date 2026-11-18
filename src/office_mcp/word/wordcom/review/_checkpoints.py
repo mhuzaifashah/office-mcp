@@ -9,12 +9,12 @@ convenience. It also lets a multi-step agent verify its own edits landed without
 re-reading the whole document.
 
 **No new COM surface.** Pure composition over shipped reads:
-`_findreplace._normalize` (the shared text normalisation `find`/`find_paragraphs`
+`_find_replace._normalize` (the shared text normalisation `find`/`find_paragraphs`
 use — so the diff agrees and ignores cosmetic churn), `paragraph_text` (paragraph
 text with `[image]` tokens), `format_info` (the `text+format` fingerprint), and
 `difflib.SequenceMatcher` (the alignment engine `find_paragraphs` already uses).
 
-Design: `spec-checkpoint-diff.md`. Mirrors `_linting.py`'s module shape (free
+Design: `spec-checkpoint-diff.md`. Mirrors `_lint.py`'s module shape (free
 functions + a `Document` method that delegates here). Build-order steps 1-4 ship
 here; `track=True` (pin-backed exact identity), `moves=True`, and per-cell table
 diffing are documented follow-ups.
@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 from ..content._tables import _strip_cell_text
 from ..exceptions import OpError
 from ..model._anchors import _read_font, _read_paragraph_format, range_text
-from ..review import _findreplace
+from ..review import _find_replace
 from ..runtime import _com
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ VERSION = 1
 INCLUDE_LEVELS = ("text", "text+style", "text+format")
 
 # A (start, end) character span used by `within=` to clip the walk; None = whole
-# document (mirrors `_linting.Span`).
+# document (mirrors `_lint.Span`).
 Span = tuple[int, int]
 
 
@@ -121,7 +121,7 @@ def _overlaps(span: Span | None, lo: int, hi: int) -> bool:
     (None = whole doc)? Word paragraph ranges are half-open — the body paragraph
     that *starts* exactly at a heading's end is a different paragraph, not part of
     the heading's scope — so a boundary touch does **not** count (unlike
-    `_linting._overlaps`, which scopes heading-line rules where this never bites)."""
+    `_lint._overlaps`, which scopes heading-line rules where this never bites)."""
     if span is None:
         return True
     return lo < span[1] and hi > span[0]
@@ -203,7 +203,7 @@ def _table_fingerprints(doc_com: Any) -> list[dict[str, Any]]:
                     # would hash identically and mask the structural change.
                     texts.append("\x00skip\x00")
                     continue
-                texts.append(_findreplace._normalize(raw).text)
+                texts.append(_find_replace._normalize(raw).text)
         out.append(
             {
                 "index": idx,
@@ -242,7 +242,7 @@ def build_checkpoint(
             if not _overlaps(span, lo, hi):
                 continue
             raw = _stable_paragraph_text(rng)
-            norm = _findreplace._normalize(raw).text
+            norm = _find_replace._normalize(raw).text
             try:
                 level = int(para.OutlineLevel)
             except Exception:
