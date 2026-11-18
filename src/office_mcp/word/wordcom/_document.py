@@ -115,6 +115,66 @@ def _resolve_level_band(levels: int | tuple[int, int] | None) -> tuple[int, int]
     raise OpError(f"levels must be an int or (lo, hi) tuple, got {levels!r}")
 
 
+def _field_spans(rng: Any) -> list[tuple[int, int, int | None, int | None]]:
+    """`(field_start, field_end, result_start, result_end)` for each field in `rng`.
+
+    A field is laid out as `{begin}code{separator}result{end}` (or
+    `{begin}code{end}` when it has no result); `Code` spans just the code, so the
+    begin mark sits at `Code.Start - 1` and the field ends one past the end mark.
+    Result bounds are None for a field with no visible result. Sorted by start.
+    Best-effort: a field whose ranges can't be read is skipped.
+    """
+    try:
+        fields = list(rng.Fields)
+    except Exception:  # noqa: BLE001 — no Fields collection (or the fake lacks one)
+        return []
+    spans: list[tuple[int, int, int | None, int | None]] = []
+    for field in fields:
+        try:
+            code = field.Code
+            code_start, code_end = int(code.Start), int(code.End)
+        except Exception:  # noqa: BLE001
+            continue
+        result_start: int | None = None
+        result_end: int | None = None
+        try:
+            result = field.Result
+            rs, re_ = int(result.Start), int(result.End)
+            if rs > code_end:  # a real result after the separator
+                result_start, result_end = rs, re_
+        except Exception:  # noqa: BLE001
+            pass
+        field_end = (result_end if result_end is not None else code_end) + 1
+        spans.append((code_start - 1, field_end, result_start, result_end))
+    spans.sort()
+    return spans
+
+
+def _split_around_fields(
+    start: int, end: int, fields: list[tuple[int, int, int | None, int | None]]
+) -> list[tuple[int, int]]:
+    """Cut `[start, end)` into pieces whose `.Text` maps 1:1 to positions.
+
+    Field codes and marks are left out; each field's result becomes its own
+    piece, cut again for fields nested inside it.
+    """
+    inside = [f for f in fields if f[0] >= start and f[1] <= end]
+    pieces: list[tuple[int, int]] = []
+    cursor = start
+    covered_to = start
+    for f_start, f_end, r_start, r_end in inside:
+        if f_start < covered_to:
+            continue  # nested in a field already handled (recursed below)
+        if f_start > cursor:
+            pieces.append((cursor, f_start))
+        if r_start is not None and r_end is not None and r_end > r_start:
+            pieces.extend(_split_around_fields(r_start, r_end, inside))
+        cursor = covered_to = f_end
+    if end > cursor:
+        pieces.append((cursor, end))
+    return pieces
+
+
 class Document:
     """Wraps a Word Document COM object."""
 
@@ -1099,70 +1159,85 @@ class Document:
     def _scope_segments(self, scope: Anchor | None) -> list[tuple[int, str]]:
         """Split a find/replace scope into segments with an exact text↔position map.
 
-        `Range.Text` string offsets line up 1:1 with Word document positions
-        *within* a single body run or a single table cell, but NOT across table
-        structure: once a range spans cells, `len(Range.Text) != End - Start`, so
-        matching on a whole-document `.Text` and adding `base + offset` silently
-        drifts into a neighbouring cell. Segmenting at table-cell boundaries keeps
-        every segment's offsets exact — contiguous non-table paragraphs form one
-        body segment (so cross-paragraph matches still work) and each table cell
-        is its own segment. Each tuple is `(base_position, text)`; a match at
-        `m.start` inside a segment maps back to the absolute `base + m.start`.
+        `Range.Text` offsets line up with Word document positions only inside
+        plain runs. Two structures break that:
 
-        Segments come out in document order (ascending base), so the matches the
-        callers build from them preserve the original document ordering.
+        - **Tables.** Once a range spans cells, `len(Range.Text) != End - Start`,
+          so a whole-document match drifts into a neighbouring cell. Contiguous
+          non-table paragraphs form one body segment (cross-paragraph matches
+          still work) and each table cell is its own segment.
+        - **Fields.** A field's code and its begin/separator/end marks occupy
+          document positions but don't appear in `.Text` (only the result does),
+          so every offset after a field would be shifted. Each span is cut around
+          its fields: the text before a field, the field's visible result (cut
+          recursively for nested fields), and the text after it are separate
+          segments. A phrase that runs across a field boundary is not matched.
+
+        Each tuple is `(base_position, text)`. Offsets inside `text` are code
+        points; callers convert them with `_utf16_len` (Word counts UTF-16 units).
+        Segments come out in document order (ascending base).
         """
         with _com.translate_com_errors():
             rng, base = self._scope_range(scope)
-            # Fast path: a scope with no table structure maps 1:1 already, so one
-            # segment over the whole range reproduces the original behavior (and
-            # avoids per-paragraph reads the test fake doesn't model). Only ranges
-            # that actually span a table need the boundary-aware walk below.
+            doc_com = self._doc  # the raw COM document (see _scope_range)
+            fields = _field_spans(rng)
+            # Fast path: no table structure and no fields maps 1:1 already, so one
+            # segment over the whole range is exact (and avoids per-paragraph reads
+            # the test fake doesn't model).
             try:
                 has_table = int(rng.Tables.Count) > 0
             except (TypeError, ValueError, AttributeError):
                 has_table = False
-            if not has_table:
+            if not has_table and not fields:
                 return [(base, str(rng.Text or ""))]
-            doc_com = self._doc  # the raw COM document (see _scope_range)
-            segments: list[tuple[int, str]] = []
-            seg_key: object | None = None
-            seg_start: int | None = None
-            seg_end: int | None = None
 
-            def flush() -> None:
-                nonlocal seg_key, seg_start, seg_end
-                if seg_start is not None and seg_end is not None and seg_end > seg_start:
-                    text = str(doc_com.Range(seg_start, seg_end).Text or "")
-                    if seg_key != "body":
+            # (start, end, is_cell) spans before field splitting.
+            spans: list[tuple[int, int, bool]] = []
+            if not has_table:
+                spans.append((base, int(rng.End), False))
+            else:
+                seg_key: object | None = None
+                seg_start: int | None = None
+                seg_end: int | None = None
+
+                def flush() -> None:
+                    nonlocal seg_key, seg_start, seg_end
+                    if seg_start is not None and seg_end is not None and seg_end > seg_start:
+                        spans.append((seg_start, seg_end, seg_key != "body"))
+                    seg_key = seg_start = seg_end = None
+
+                for para in rng.Paragraphs:
+                    pr = para.Range
+                    ps, pe = int(pr.Start), int(pr.End)
+                    if _within_table(doc_com, ps, pe):
+                        # Key by the containing cell so two adjacent cells never
+                        # share a segment (a range spanning them breaks the 1:1 map).
+                        try:
+                            key: object = int(pr.Cells(1).Range.Start)
+                        except Exception:
+                            key = ps  # defensive: give this paragraph its own segment
+                    else:
+                        key = "body"
+                    if key != seg_key:
+                        flush()
+                        seg_key, seg_start = key, ps
+                    seg_end = pe
+                flush()
+
+            segments: list[tuple[int, str]] = []
+            for span_start, span_end, is_cell in spans:
+                pieces = _split_around_fields(span_start, span_end, fields)
+                for i, (a, b) in enumerate(pieces):
+                    text = str(doc_com.Range(a, b).Text or "")
+                    if is_cell and i == len(pieces) - 1:
                         # A cell's text ends with CR + the cell mark (`\r\x07`),
                         # which together occupy a single document position — so
                         # `len(text)` runs one past `End - Start`, and a match at
-                        # the cell's tail would map its end *past* the cell into
-                        # the next one (the cause of the old `'Opus\r\x072'`
-                        # boundary error). Drop those trailing markers; the
-                        # remaining content stays 1:1 with document positions.
+                        # the cell's tail would map past the cell into the next
+                        # one. Drop those trailing markers; the rest stays 1:1.
                         text = text.rstrip("\r\n\x07")
-                    segments.append((seg_start, text))
-                seg_key = seg_start = seg_end = None
-
-            for para in rng.Paragraphs:
-                pr = para.Range
-                ps, pe = int(pr.Start), int(pr.End)
-                if _within_table(doc_com, ps, pe):
-                    # Key by the containing cell so two adjacent cells never share
-                    # a segment (a range spanning them would break the 1:1 map).
-                    try:
-                        key: object = int(pr.Cells(1).Range.Start)
-                    except Exception:
-                        key = ps  # defensive: give this paragraph its own segment
-                else:
-                    key = "body"
-                if key != seg_key:
-                    flush()
-                    seg_key, seg_start = key, ps
-                seg_end = pe
-            flush()
+                    if text:
+                        segments.append((a, text))
         return segments
 
     def find(
@@ -1187,15 +1262,25 @@ class Document:
         cell) so the returned offsets stay exact even inside tables; see
         `_scope_segments`.
         """
-        segments = self._scope_segments(scope)
+        return self._match_payloads(text, scope)
+
+    def _match_payloads(self, text: str, scope: Anchor | None) -> list[dict[str, Any]]:
+        """Every fuzzy match of `text` in `scope` as `{anchor_id, start, end, text}`.
+
+        Match offsets within a segment are code points; Word positions count
+        UTF-16 units, so each is converted (an emoji earlier in the segment would
+        otherwise shift the match left by one per astral character).
+        """
         results: list[dict[str, Any]] = []
-        for base, haystack in segments:
+        for base, haystack in self._scope_segments(scope):
             for m in _findreplace.find_matches(haystack, text):
+                start = base + _utf16_len(haystack[: m.start])
+                end = start + _utf16_len(haystack[m.start : m.end])
                 results.append(
                     {
-                        "anchor_id": f"range:{base + m.start}-{base + m.end}",
-                        "start": base + m.start,
-                        "end": base + m.end,
+                        "anchor_id": f"range:{start}-{end}",
+                        "start": start,
+                        "end": end,
                         "text": m.text,
                     }
                 )
@@ -1234,17 +1319,7 @@ class Document:
         and raises `ReplaceVerificationError` rather than overwriting the wrong
         span.
         """
-        segments = self._scope_segments(scope)
-        match_payloads: list[dict[str, Any]] = [
-            {
-                "anchor_id": f"range:{base + m.start}-{base + m.end}",
-                "start": base + m.start,
-                "end": base + m.end,
-                "text": m.text,
-            }
-            for base, haystack in segments
-            for m in _findreplace.find_matches(haystack, find)
-        ]
+        match_payloads = self._match_payloads(find, scope)
         if not match_payloads:
             raise AnchorNotFoundError("find", find)
 
