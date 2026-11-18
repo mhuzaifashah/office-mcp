@@ -136,8 +136,8 @@ accepts `before` / `after` / `where` to pick the side of the anchor.
 ### Text and paragraphs
 | Op | Fields | Notes |
 | -- | ------ | ----- |
-| `insert_paragraph` | **anchor_id**, `text` \| `runs`, style, bind, ± where | new paragraph next to any anchor; exactly one of `text` / `runs` |
-| `insert_block` | **anchor_id**, **items**, bind, ± where | several styled paragraphs in reading order; returns the block's `range` |
+| `insert_paragraph` | **anchor_id**, `text` \| `runs`, style, bind, ± where | new paragraph next to any anchor; exactly one of `text` / `runs`. Without `style` it is `Normal` (it never inherits a heading's style) |
+| `insert_block` | **anchor_id**, **items**, bind, ± where | several styled paragraphs in reading order (unstyled items are `Normal`); returns the block's `range` |
 | `insert_section` | **anchor_id**, **heading**, **body**, level, bind, ± where | a `Heading {level}` plus its body (items shape) |
 | `insert_markdown` | **anchor_id**, **markdown**, bind, ± where | constrained Markdown as real Word structure |
 | `replace_section` | **anchor_id** (a heading), `body` \| `markdown` | rewrite a heading's body, keeping the heading |

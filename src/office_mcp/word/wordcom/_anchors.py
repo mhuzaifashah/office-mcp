@@ -164,6 +164,10 @@ _CC_TYPE_NAMES: dict[str, WdContentControlType] = {
 _CC_LIST_TYPES = (WdContentControlType.COMBO_BOX, WdContentControlType.DROPDOWN_LIST)
 
 
+# Word's built-in id for the Normal style (WdBuiltinStyle.wdStyleNormal).
+_WD_STYLE_NORMAL = -1
+
+
 def _normalize_cc_items(items: list[Any]) -> list[tuple[str, str]]:
     """Normalize dropdown / combo-box `items` to ``(text, value)`` pairs.
 
@@ -1167,13 +1171,33 @@ class Anchor(ABC):
             insert_rng = self._doc.com.Range(rng.End, rng.End)
             insert_rng.Text = text
 
+    def _paragraph_style_or_normal(self, style: str | None) -> Any:
+        """The style object for a new paragraph: `style` if given, else ``Normal``.
+
+        A paragraph split off an existing one inherits that paragraph's style, so
+        without a pinned default a body line inserted after a heading would itself
+        become a heading. Returns ``None`` only when the document has no ``Normal``.
+        """
+        if style is not None:
+            return self._doc.styles[style]
+        # Resolve Normal by its built-in id (wdStyleNormal = -1): the style's
+        # NameLocal is translated in non-English Word ("Standard", "Normale", …).
+        name = "Normal"
+        try:
+            name = str(self._doc.com.Styles(_WD_STYLE_NORMAL).NameLocal)
+        except Exception:
+            pass
+        return self._doc.styles[name] if name in self._doc.styles else None
+
     def insert_paragraph_before(self, text: str, style: str | None = None) -> None:
         """Insert a new paragraph immediately before this anchor's range.
 
         If `style` is given it must name a style defined in the document;
         otherwise `StyleNotFoundError` is raised before any text is inserted.
+        Without `style` the new paragraph is ``Normal`` (it does not inherit the
+        anchor paragraph's style).
         """
-        style_obj = self._doc.styles[style] if style is not None else None
+        style_obj = self._paragraph_style_or_normal(style)
         with _com.translate_com_errors():
             doc_com = self._doc.com
             start = int(self._range().Start)
@@ -1190,6 +1214,8 @@ class Anchor(ABC):
 
         If `style` is given it must name a style defined in the document;
         otherwise `StyleNotFoundError` is raised before any text is inserted.
+        Without `style` the new paragraph is ``Normal`` (it does not inherit the
+        anchor paragraph's style).
 
         When the anchor is (or ends at) the document's final paragraph there is
         no position *after* the terminal paragraph mark to write to — Word
@@ -1199,7 +1225,7 @@ class Anchor(ABC):
         "build from scratch" case, where the only paragraph *is* the last one —
         just works.
         """
-        style_obj = self._doc.styles[style] if style is not None else None
+        style_obj = self._paragraph_style_or_normal(style)
         with _com.translate_com_errors():
             doc_com = self._doc.com
             end = int(self._range().End)
@@ -1239,7 +1265,7 @@ class Anchor(ABC):
         - ``{"text": "**Bold lead** — rest", "style": "List Bullet"}`` — `text`
           carries the tiny inline markdown (`**bold**`, `*italic*`,
           `***both***`; escape a literal asterisk as ``\\*``), and `style` names
-          the paragraph style.
+          the paragraph style (``Normal`` when omitted).
         - ``{"runs": [{"text": "Bold lead", "bold": true}, {"text": " — rest"}],
           "style": "List Bullet"}`` — the structured form: each run is
           ``{text, bold?, italic?, underline?, style?}`` (a per-run character
@@ -1261,7 +1287,7 @@ class Anchor(ABC):
         # Resolve every paragraph + run style before touching the document, so a
         # bad name fails the whole block cleanly rather than leaving a partial,
         # half-styled run behind.
-        para_styles = [self._doc.styles[s] if s else None for _, s in norm]
+        para_styles = [self._paragraph_style_or_normal(s or None) for _, s in norm]
         run_styles: dict[str, Any] = {}
         for runs, _ in norm:
             for r in runs:
