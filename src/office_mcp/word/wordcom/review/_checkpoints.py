@@ -14,10 +14,9 @@ use — so the diff agrees and ignores cosmetic churn), `paragraph_text` (paragr
 text with `[image]` tokens), `format_info` (the `text+format` fingerprint), and
 `difflib.SequenceMatcher` (the alignment engine `find_paragraphs` already uses).
 
-Design: `spec-checkpoint-diff.md`. Mirrors `_lint.py`'s module shape (free
-functions + a `Document` method that delegates here). Build-order steps 1-4 ship
-here; `track=True` (pin-backed exact identity), `moves=True`, and per-cell table
-diffing are documented follow-ups.
+Same module shape as `_lint.py`: free functions plus a `Document` method that
+delegates here. Not implemented yet: pin-backed exact identity (`track=True`),
+move detection (`moves=True`), and per-cell table diffing.
 """
 
 from __future__ import annotations

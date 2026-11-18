@@ -2,8 +2,7 @@
 
 Run:  .venv/Scripts/python.exe -m office_mcp.word.test_word
 
-The vendored `wordcom` test-suite (`tests/`, 1500+ tests, mocked COM) already
-covers the operation logic. This script exercises the *live* round-trip through
+The mocked-COM test suite (`tests/word/`) covers the operation logic. This script exercises the *live* round-trip through
 `WordController` — the part that needs a real Word instance.
 
 Behaviour:

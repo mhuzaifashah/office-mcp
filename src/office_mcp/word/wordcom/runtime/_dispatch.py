@@ -998,7 +998,7 @@ def dispatch_write(
     worker: Worker, command: str, p: dict[str, Any], *, policy: PathPolicy | None = None
 ) -> dict[str, Any]:
     # Default to a deny-all policy: saving is off and non-local image paths are
-    # rejected unless the caller (build_server) supplies a configured policy.
+    # rejected unless the caller (the controller) supplies a configured policy.
     policy = policy if policy is not None else PathPolicy()
 
     def job() -> dict[str, Any]:

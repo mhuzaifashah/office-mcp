@@ -14,8 +14,8 @@ an op-shaped `fix` (literally an `exec` op, or a list of them), so `regularize`
 is "lint, then run each finding's `fix` through the existing `run_batch` loop" —
 the fix path reuses the audited op vocabulary rather than a parallel writer.
 
-Design: `spec-linter.md`. Mirrors `_proofing.py`'s module shape (rule functions +
-a `run_lint` entry that `Document.lint` delegates to).
+Same module shape as `_proofing.py`: rule functions plus a `run_lint` entry
+that `Document.lint` delegates to.
 """
 
 from __future__ import annotations

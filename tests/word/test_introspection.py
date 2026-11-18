@@ -152,7 +152,7 @@ def test_stats_preserves_saved_dirty_bit(fake_word):
 
 
 # ---------------------------------------------------------------------------
-# MCP — word_read location / stats / table_records, word_write table records
+# Dispatch — read location / stats / table_records, write table records
 # ---------------------------------------------------------------------------
 
 

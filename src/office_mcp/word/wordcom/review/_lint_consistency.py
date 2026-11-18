@@ -1,6 +1,6 @@
 """Consistency rules — direct formatting that drifted from the applied style.
 
-The reframing from `spec-linter.md` §2: a "consistency" defect is almost always a
+The idea: a "consistency" defect is almost always a
 **direct override that deviates from the paragraph's own style** (a `Heading 1`
 at 15pt, a body run in a different face). `anchor.format_info()` already reports
 this per field (`override: true` with the style baseline alongside), so these

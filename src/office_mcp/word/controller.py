@@ -5,18 +5,17 @@ This is the public entry point of the `word` package. It owns a single
 onto that thread — required because hosts (e.g. an MCP server) call in from a thread pool
 and COM objects are apartment-threaded.
 
-It deliberately does **not** reimplement the operation vocabulary. The four
-dispatch entry points reuse the vendored op-dispatch impls verbatim
-(`wordcom/_dispatch.py`, relocated out of upstream's `mcp/server.py` with the
-FastMCP shell stripped):
+It does not implement any operation itself: its four methods call the engine's
+dispatch entry points in `wordcom/runtime/_dispatch.py`:
 
     read(command, **params)   -> wordcom.runtime._dispatch.dispatch_read     (introspection)
     write(command, **params)  -> wordcom.runtime._dispatch.dispatch_write    (one op, atomic undo)
     exec(ops, ...)            -> wordcom.runtime._dispatch.dispatch_exec      (batch, one undo)
     snapshot(...)             -> wordcom.runtime._dispatch.dispatch_snapshot  (page/anchor -> PNG)
 
-The op param shapes are exactly those documented by upstream `wordcom` (and its
-`_skill/` SKILL.md guides). Server/tool layers are built on top of this class.
+Command and op parameters are documented in the bundled guide
+(`wordcom/_skill/wordcom-mcp/SKILL.md`, also returned by `read("guide")`). The
+MCP server layer is built on top of this class.
 """
 
 from __future__ import annotations
@@ -87,8 +86,8 @@ class WordController:
 
         If the file is already open in the running instance, activates that
         document instead of opening a duplicate. Mirrors ``ExcelController.open``
-        (the vendored ``wordcom`` engine has no open op of its own — it assumes
-        the user already has the document open — so this lives on the facade).
+        (the ``wordcom`` engine has no open op of its own — it works on documents
+        the user already has open — so this lives on the facade).
 
         Args:
             path: Path to a ``.docx``/``.doc`` (or other Word-openable) file.
@@ -147,7 +146,7 @@ class WordController:
     def __exit__(self, *exc: object) -> None:
         self.close()
 
-    # -- dispatch surface (mirrors the 4 upstream MCP tools) ---------------
+    # -- dispatch surface: read / write / exec / snapshot --------------------
 
     def read(self, command: str, /, **params: Any) -> Any:
         """Read-only introspection (`outline`, `status`, `find`, `read_text`, …)."""

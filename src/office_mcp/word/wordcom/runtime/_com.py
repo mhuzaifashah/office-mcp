@@ -45,10 +45,9 @@ def get_active_word() -> Any:
     `Documents.Count` is 0 even though a document is open in another instance —
     the open doc lives in the Running Object Table (ROT) as a file moniker. In
     that case (or if `GetActiveObject` fails outright) we scan the ROT for an
-    instance that actually has documents. Ported from word-mcp-live's
-    `_find_word_with_docs` (ykarapazar/word-mcp-live).
-
-    LOCAL-PATCH: this ROT fallback is the only change to vendored `_com.py`.
+    instance that actually has documents (see `_find_word_with_docs`; the
+    approach is adapted from word-mcp-live's `_find_word_with_docs`,
+    ykarapazar/word-mcp-live).
     """
     try:
         from win32com.client import GetActiveObject  # type: ignore[import-not-found]
