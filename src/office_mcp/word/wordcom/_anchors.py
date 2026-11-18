@@ -69,6 +69,34 @@ def _utf16_len(s: str) -> int:
     return len(s.encode("utf-16-le")) // 2
 
 
+def _utf16_units_to_index(text: str, units: int) -> int:
+    """The code-point index in `text` that sits `units` UTF-16 units in."""
+    seen = 0
+    for index, ch in enumerate(text):
+        if seen >= units:
+            return index
+        seen += 2 if ord(ch) > 0xFFFF else 1
+    return len(text)
+
+
+def _shape_char_index(rng: Any, raw: str, base: int, position: int) -> int:
+    """Index in `raw` (the range's `.Text`) of the character at document `position`.
+
+    Document positions count UTF-16 units and include field codes/marks that
+    `.Text` leaves out, so `position - base` is not a string index once an emoji
+    or a field precedes the shape. The visible text before the shape is exactly
+    the prefix of `raw`, so its length is the index. Falls back to converting
+    UTF-16 units when that prefix can't be read.
+    """
+    try:
+        prefix = rng.Document.Range(base, position).Text
+    except Exception:  # noqa: BLE001
+        prefix = None
+    if isinstance(prefix, str):
+        return len(prefix)
+    return _utf16_units_to_index(raw, position - base)
+
+
 def range_text(rng: Any) -> str:
     """Read a COM range's text with inline shapes surfaced as ``[image]`` tokens.
 
@@ -78,8 +106,9 @@ def range_text(rng: Any) -> str:
     text (a forward slash, on some Word versions) — so a naive string replace
     would clobber genuine characters. Instead we locate the shapes via the
     ``InlineShapes`` collection and swap only the character at each shape's own
-    position, leaving real text untouched. A range with no inline shapes returns
-    its raw text unchanged.
+    position (mapped from document position to string index, see
+    `_shape_char_index`), leaving real text untouched. A range with no inline
+    shapes returns its raw text unchanged.
     """
     raw = str(rng.Text or "")
     try:
@@ -88,13 +117,14 @@ def range_text(rng: Any) -> str:
         if count <= 0:
             return raw
         base = int(rng.Start)
-        offsets = sorted({int(shapes.Item(i).Range.Start) - base for i in range(1, count + 1)})
+        positions = sorted({int(shapes.Item(i).Range.Start) for i in range(1, count + 1)})
+        offsets = [_shape_char_index(rng, raw, base, pos) for pos in positions]
     except Exception:
         # If the shape geometry can't be read, fall back to the raw text rather
         # than risk mangling it — a phantom char is better than a crash.
         return raw
     chars = list(raw)
-    for off in reversed(offsets):
+    for off in sorted(set(offsets), reverse=True):
         if 0 <= off < len(chars):
             chars[off] = "[image]"
     return "".join(chars)

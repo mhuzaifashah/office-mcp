@@ -330,3 +330,21 @@ def test_insert_image_on_heading_anchor(fake_word, png_file):
     )
     end = para.Range.End
     fake_word.ActiveDocument.Range(end, end).InlineShapes.AddPicture.assert_called_once()
+
+
+# W19: shape positions are UTF-16 document positions, not string indexes.
+
+
+def test_range_text_image_after_emoji_replaces_the_placeholder():
+    # "🚀" is one character but two document positions, so the placeholder "/"
+    # sits at position 3 while being string index 2.
+    rng = _range_with_shapes("🚀 /x", start=0, shape_starts=[3])
+    assert range_text(rng) == "🚀 [image]x"
+
+
+def test_range_text_image_after_field_uses_visible_prefix():
+    # A PAGE field's code occupies positions that `.Text` omits: the picture is
+    # at document position 12, but only "p7 " (3 chars) is visible before it.
+    rng = _range_with_shapes("p7 /tail", start=0, shape_starts=[12])
+    rng.Document.Range.side_effect = lambda a, b: MagicMock(Text="p7 ")
+    assert range_text(rng) == "p7 [image]tail"
