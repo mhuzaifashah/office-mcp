@@ -147,7 +147,7 @@ class WordController:
         return self._worker.run_on_word(job)
 
     def close(self) -> None:
-        """Stop the COM worker thread (does not close Word)."""
+        """Stop the COM worker thread (does not close Word). The controller is unusable after."""
         self._worker.shutdown()
 
     def __enter__(self) -> WordController:

@@ -24,7 +24,7 @@ from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeout
 from typing import Any, Protocol, TypeVar
 
-from .exceptions import WordBusyError
+from .exceptions import WordBusyError, WordcomError
 
 T = TypeVar("T")
 
@@ -69,14 +69,20 @@ class ComWorker:
         self._timeout = timeout
         self._jobs: queue.Queue[Any] = queue.Queue()
         self._thread: threading.Thread | None = None
+        self._closed = False
+        # Guards thread start, `_closed`, and every put onto `_jobs`, so no job
+        # can be queued behind the shutdown sentinel and no second thread starts.
         self._lock = threading.Lock()
 
-    def _ensure_started(self) -> None:
+    def _submit(self, job: Any) -> None:
+        """Start the thread if needed and queue `job`; refuse after `shutdown`."""
         with self._lock:
-            if self._thread is not None and self._thread.is_alive():
-                return
-            self._thread = threading.Thread(target=self._loop, name="wordcom-com", daemon=True)
-            self._thread.start()
+            if self._closed:
+                raise WordcomError("the Word COM worker has been shut down")
+            if self._thread is None or not self._thread.is_alive():
+                self._thread = threading.Thread(target=self._loop, name="wordcom-com", daemon=True)
+                self._thread.start()
+            self._jobs.put(job)
 
     def _loop(self) -> None:
         # One outer CoInitialize keeps the STA apartment alive for the thread's
@@ -116,9 +122,8 @@ class ComWorker:
         worker's timeout, e.g. because a dialog is blocking it. The call keeps
         running on the worker; later calls queue behind it until it finishes.
         """
-        self._ensure_started()
         future: Future[T] = Future()
-        self._jobs.put((fn, future))
+        self._submit((fn, future))
         try:
             return future.result(timeout=self._timeout)
         except FutureTimeout:
@@ -129,11 +134,19 @@ class ComWorker:
                 "(a dialog may be open, or it is still busy); retry shortly"
             ) from None
 
-    def shutdown(self) -> None:
-        """Stop the worker thread (best-effort; the thread is a daemon anyway)."""
+    def shutdown(self, timeout: float = 2.0) -> None:
+        """Stop the worker thread. Calls already queued still run; new calls are refused.
+
+        The thread reference is kept even if it doesn't exit within the join
+        timeout (it's finishing a long Word call), so a later call can never start
+        a second COM thread next to it. Idempotent.
+        """
         with self._lock:
+            if self._closed:
+                return
+            self._closed = True
             thread = self._thread
-            self._thread = None
-        if thread is not None and thread.is_alive():
-            self._jobs.put(_SHUTDOWN)
-            thread.join(timeout=2.0)
+            if thread is not None and thread.is_alive():
+                self._jobs.put(_SHUTDOWN)
+        if thread is not None:
+            thread.join(timeout=timeout)
