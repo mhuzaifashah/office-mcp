@@ -8,9 +8,10 @@ sits in the body paragraph (13–29).
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._fields import field_kind
-from wordcom.exceptions import AnchorNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._fields import field_kind
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError
 
 
 def _make_app(**kwargs):
@@ -62,7 +63,7 @@ def test_ref_field_kind(monkeypatch):
     app = _make_app(
         fields=[{"code": "REF Risks \\h", "result": "Risks", "type": 3, "start": 5, "end": 6}],
     )
-    from wordcom import _com
+    from office_mcp.word.wordcom import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -86,8 +87,8 @@ def test_index_out_of_range(fake_word):
 
 def test_mcp_fields(fake_word):
     pytest.importorskip("mcp")
-    from wordcom._dispatch import _read_impl
-    from wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom._dispatch import _read_impl
+    from office_mcp.word.wordcom._worker import InlineWorker
 
     rows = _read_impl(InlineWorker(), "fields", {})
     assert rows[0]["kind"] == "PAGE"

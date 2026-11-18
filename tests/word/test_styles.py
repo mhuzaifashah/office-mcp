@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom.constants import WdParagraphAlignment
-from wordcom.exceptions import AnchorNotFoundError, OpError, StyleNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom.constants import WdParagraphAlignment
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError, StyleNotFoundError
 
 # ---------------------------------------------------------------------------
 # StyleCollection

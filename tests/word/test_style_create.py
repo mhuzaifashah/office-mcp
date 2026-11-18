@@ -8,11 +8,12 @@ the direct-then-iterate `Style.com` lookup can then resolve by name.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._format import to_bgr
-from wordcom._ops import run_batch
-from wordcom.constants import WdParagraphAlignment, WdStyleType
-from wordcom.exceptions import OpError, StyleNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._format import to_bgr
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.constants import WdParagraphAlignment, WdStyleType
+from office_mcp.word.wordcom.exceptions import OpError, StyleNotFoundError
 
 
 def _style_mock(fake_word, name):

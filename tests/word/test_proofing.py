@@ -7,7 +7,8 @@ grammar error ("is are"), and a handful of readability statistics.
 from __future__ import annotations
 
 import pytest
-import wordcom
+
+from office_mcp.word import wordcom
 
 
 def _make_doc(**kwargs):
@@ -48,7 +49,7 @@ def test_proofing_unavailable_is_graceful(monkeypatch):
     doc.SpellingErrors = _FakeProofErrors([], raises=True)
     doc.GrammaticalErrors = _FakeProofErrors([], raises=True)
     doc.ReadabilityStatistics = _FakeReadability({}, raises=True)
-    from wordcom import _com
+    from office_mcp.word.wordcom import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -67,8 +68,8 @@ def test_proofing_unavailable_is_graceful(monkeypatch):
 
 def test_mcp_proofing(fake_word):
     pytest.importorskip("mcp")
-    from wordcom._dispatch import _read_impl
-    from wordcom._worker import InlineWorker
+    from office_mcp.word.wordcom._dispatch import _read_impl
+    from office_mcp.word.wordcom._worker import InlineWorker
 
     data = _read_impl(InlineWorker(), "proofing", {})
     assert data["spelling"]["count"] == 1

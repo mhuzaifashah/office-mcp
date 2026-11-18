@@ -8,9 +8,10 @@ import types
 from unittest.mock import MagicMock
 
 import pytest
-from wordcom import _com
-from wordcom._worker import ComWorker, call_timeout_from_env
-from wordcom.exceptions import WordBusyError
+
+from office_mcp.word.wordcom import _com
+from office_mcp.word.wordcom._worker import ComWorker, call_timeout_from_env
+from office_mcp.word.wordcom.exceptions import WordBusyError
 
 WORD_APP_MONIKER = "!{000209FF-0000-0000-C000-000000000046}"
 

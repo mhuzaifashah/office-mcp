@@ -13,7 +13,8 @@ import base64
 import contextlib
 
 import pytest
-from wordcom._markdown import parse_markdown
+
+from office_mcp.word.wordcom._markdown import parse_markdown
 
 pytestmark = pytest.mark.smoke
 

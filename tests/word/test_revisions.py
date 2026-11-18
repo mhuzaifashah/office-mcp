@@ -10,8 +10,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-import wordcom
-from wordcom.exceptions import AnchorNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError
 
 # --- the reader ----------------------------------------------------------------
 

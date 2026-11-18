@@ -23,11 +23,8 @@ from __future__ import annotations
 import os
 import uuid
 
-from wordcom.exceptions import WordcomError, WordNotRunningError
-
-# Importing the package runs controller.py's sys.path bootstrap, which makes the
-# vendored `wordcom` importable as a top-level package for the lines below.
 from office_mcp.word import WordController
+from office_mcp.word.wordcom.exceptions import WordcomError, WordNotRunningError
 
 
 def _run_read_checks(wc: WordController) -> None:

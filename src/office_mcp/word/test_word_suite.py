@@ -32,17 +32,11 @@ import os
 import sys
 import tempfile
 import time
-from pathlib import Path
 from typing import Any, Callable
 
-# Allow running as a script; also runs controller.py's sys.path bootstrap so the
-# vendored ``wordcom`` is importable as a top-level package.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from wordcom import attach  # noqa: E402
-from wordcom.exceptions import WordcomError, WordNotRunningError  # noqa: E402
-
-from office_mcp.word import WordController  # noqa: E402
+from office_mcp.word import WordController
+from office_mcp.word.wordcom import attach
+from office_mcp.word.wordcom.exceptions import WordcomError, WordNotRunningError
 
 STEP_DELAY = float(os.environ.get("WORDCOM_TEST_DELAY", "0"))
 CLEANUP = os.environ.get("WORDCOM_TEST_CLEANUP") == "1"

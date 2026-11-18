@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-import wordcom
-from wordcom.exceptions import AnchorNotFoundError, ComError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, ComError
 
 
 def test_anchor_abstract_base_cannot_be_instantiated():
@@ -14,7 +15,7 @@ def test_anchor_abstract_base_cannot_be_instantiated():
     Subclasses missing `_range` or `set_text` now fail at construction time
     with a clear TypeError, not silently until the first call.
     """
-    from wordcom._anchors import Anchor
+    from office_mcp.word.wordcom._anchors import Anchor
 
     with pytest.raises(TypeError, match=r"abstract"):
         Anchor(None, "x")  # type: ignore[abstract,arg-type]
@@ -23,7 +24,7 @@ def test_anchor_abstract_base_cannot_be_instantiated():
 def test_anchor_subclass_missing_method_fails_at_construction():
     """A would-be Anchor that forgets to override `set_text` must fail when
     instantiated, not at call site."""
-    from wordcom._anchors import Anchor
+    from office_mcp.word.wordcom._anchors import Anchor
 
     class IncompleteAnchor(Anchor):
         # _range overridden, but set_text intentionally omitted
@@ -64,7 +65,7 @@ def test_bookmark_list_hides_word_internal_bookmarks(monkeypatch):
         },
     )
     app = _make_application([doc_com])
-    from wordcom import _com as _com_module
+    from office_mcp.word.wordcom import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
@@ -189,7 +190,7 @@ def test_content_control_empty_name_does_not_match_untitled_cc(fake_word, monkey
         ],
     )
     app = _make_application([doc_com])
-    from wordcom import _com as _com_module
+    from office_mcp.word.wordcom import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
@@ -235,7 +236,7 @@ def test_outline(fake_word):
 )
 def test_from_com_error_classifies_busy(hresult):
     """T-4: every entry in `_BUSY_HRESULTS` must classify to WordBusyError."""
-    from wordcom.exceptions import WordBusyError, from_com_error
+    from office_mcp.word.wordcom.exceptions import WordBusyError, from_com_error
 
     class _FakeComError(Exception):
         def __init__(self, h: int) -> None:
@@ -253,7 +254,7 @@ def test_from_com_error_classifies_busy(hresult):
 
 
 def test_from_com_error_other_is_com_error():
-    from wordcom.exceptions import from_com_error
+    from office_mcp.word.wordcom.exceptions import from_com_error
 
     class _FakeComError(Exception):
         def __init__(self) -> None:
@@ -471,7 +472,7 @@ def test_heading_section_range_when_heading_is_last_paragraph(monkeypatch):
         content="Body\rLast\r",
     )
     app = _make_application([doc_com])
-    from wordcom import _com as _com_module
+    from office_mcp.word.wordcom import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 
@@ -500,7 +501,7 @@ def test_heading_section_text_stops_at_same_level(fake_word, monkeypatch):
         content="Introduction\rBody 1\rConclusion\rBody 2\r",
     )
     app = _make_application([doc_com])
-    from wordcom import _com as _com_module
+    from office_mcp.word.wordcom import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 

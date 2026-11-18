@@ -2496,7 +2496,7 @@ def fake_word(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     )
     app = _make_application([doc])
 
-    from wordcom import _com
+    from office_mcp.word.wordcom import _com
 
     monkeypatch.setattr(_com, "get_active_word", lambda: app)
     monkeypatch.setattr(_com, "launch_word", lambda visible=True: app)
@@ -2506,8 +2506,8 @@ def fake_word(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 @pytest.fixture
 def no_word(monkeypatch: pytest.MonkeyPatch) -> None:
     """Simulate Word not running."""
-    from wordcom import _com
-    from wordcom.exceptions import WordNotRunningError
+    from office_mcp.word.wordcom import _com
+    from office_mcp.word.wordcom.exceptions import WordNotRunningError
 
     def _raise(*args: Any, **kwargs: Any) -> None:
         raise WordNotRunningError("no running Microsoft Word instance found")
@@ -2519,8 +2519,8 @@ def no_word(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def real_word():
     """Smoke fixture: yields a wordcom.Word, or skips if Word isn't reachable."""
-    import wordcom
-    from wordcom.exceptions import WordNotRunningError
+    from office_mcp.word import wordcom
+    from office_mcp.word.wordcom.exceptions import WordNotRunningError
 
     try:
         ctx = wordcom.attach()

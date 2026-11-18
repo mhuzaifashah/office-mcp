@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import wordcom
+from office_mcp.word import wordcom
 
 
 def test_track_changes_reads_flag(fake_word):

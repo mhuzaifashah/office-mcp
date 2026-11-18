@@ -11,12 +11,13 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-import wordcom
-from wordcom._anchors import RangeAnchor
-from wordcom._dispatch import _write_impl
-from wordcom._ops import run_batch
-from wordcom._worker import InlineWorker
-from wordcom.exceptions import OpError, StyleNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._anchors import RangeAnchor
+from office_mcp.word.wordcom._dispatch import _write_impl
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom._worker import InlineWorker
+from office_mcp.word.wordcom.exceptions import OpError, StyleNotFoundError
 
 W = InlineWorker()
 

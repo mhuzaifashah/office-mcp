@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
-import wordcom
-from wordcom._dispatch import _read_impl, _write_impl
-from wordcom._ops import run_batch
-from wordcom._worker import InlineWorker
-from wordcom.constants import WdInformation as _Info
-from wordcom.constants import WdStatistic as _Stat
-from wordcom.exceptions import OpError
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._dispatch import _read_impl, _write_impl
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom._worker import InlineWorker
+from office_mcp.word.wordcom.constants import WdInformation as _Info
+from office_mcp.word.wordcom.constants import WdStatistic as _Stat
+from office_mcp.word.wordcom.exceptions import OpError
 
 W = InlineWorker()
 

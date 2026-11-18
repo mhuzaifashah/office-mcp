@@ -11,7 +11,7 @@ politely: their cursor, selection, and scroll position are preserved, and every
 `doc.edit("…")` block collapses into a single Ctrl-Z.
 
 ```python
-import wordcom as wl
+from office_mcp.word import wordcom as wl
 
 with wl.attach() as word:  # attach to the already-running Word (raises if none)
     doc = word.documents.active  # the focused document

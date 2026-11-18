@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import wordcom
+from office_mcp.word import wordcom
 
 
 def test_info_reports_collapsed_cursor(fake_word):

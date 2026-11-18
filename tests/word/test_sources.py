@@ -9,9 +9,10 @@ builder is asserted by substring on the recorded `Sources.Add` argument.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._ops import run_batch
-from wordcom.exceptions import OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.exceptions import OpError
 
 
 def _bib(fake_word):

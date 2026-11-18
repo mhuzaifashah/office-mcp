@@ -22,27 +22,18 @@ The op param shapes are exactly those documented by upstream `wordcom` (and its
 from __future__ import annotations
 
 import os
-import sys
 from typing import Any
 
-# The vendored package uses internal relative imports, but `_guide.py` loads its
-# bundled skill data via `importlib.resources.files("wordcom")` and the vendored
-# test-suite imports `wordcom` absolutely — both need `wordcom` importable as a
-# top-level package. Put this directory (which contains `wordcom/`) on sys.path.
-_VENDOR_ROOT = os.path.dirname(os.path.abspath(__file__))
-if _VENDOR_ROOT not in sys.path:
-    sys.path.insert(0, _VENDOR_ROOT)
-
-from wordcom import _com  # noqa: E402
-from wordcom._dispatch import (  # noqa: E402
+from .wordcom import _com
+from .wordcom._dispatch import (
     _exec_impl,
     _read_impl,
     _snapshot_impl,
     _write_impl,
 )
-from wordcom._paths import PathPolicy, reject_nonlocal_path  # noqa: E402
-from wordcom._worker import ComWorker, call_timeout_from_env  # noqa: E402
-from wordcom.exceptions import WordNotRunningError  # noqa: E402
+from .wordcom._paths import PathPolicy, reject_nonlocal_path
+from .wordcom._worker import ComWorker, call_timeout_from_env
+from .wordcom.exceptions import WordNotRunningError
 
 __all__ = ["WordController"]
 
@@ -114,7 +105,7 @@ class WordController:
         if not os.path.isfile(resolved):
             raise IsADirectoryError(f"Not a file: {resolved}")
 
-        from wordcom import connect  # noqa: PLC0415 — vendored, on sys.path
+        from .wordcom import connect  # noqa: PLC0415
 
         def job() -> dict[str, Any]:
             with connect(launch_if_missing=True, visible=visible) as word:

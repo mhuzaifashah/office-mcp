@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom import Paragraph
-from wordcom.exceptions import AnchorNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import Paragraph
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError
 
 
 def test_paragraphs_len(fake_word):
@@ -39,7 +40,7 @@ def test_paragraphs_list_surfaces_style_names(fake_word, monkeypatch):
         content="Accomplishments\rShipped v2\rA closing note.\r",
     )
     app = _make_application([doc_com])
-    from wordcom import _com as _com_module
+    from office_mcp.word.wordcom import _com as _com_module
 
     monkeypatch.setattr(_com_module, "get_active_word", lambda: app)
 

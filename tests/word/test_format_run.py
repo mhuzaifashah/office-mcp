@@ -8,11 +8,12 @@ auto-creates `.Font`, so no fixture change is needed.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._format import to_bgr
-from wordcom._ops import run_batch
-from wordcom.constants import WdColorIndex, WdUnderline
-from wordcom.exceptions import OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._format import to_bgr
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.constants import WdColorIndex, WdUnderline
+from office_mcp.word.wordcom.exceptions import OpError
 
 
 def _addr_font(fake_word):

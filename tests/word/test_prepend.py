@@ -7,9 +7,10 @@ a prepended paragraph is written as ``"<text><break>"`` at offset 0.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom import StartAnchor
-from wordcom.exceptions import StyleNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import StartAnchor
+from office_mcp.word.wordcom.exceptions import StyleNotFoundError
 
 
 def test_prepend_paragraph_writes_text_then_break_at_start(fake_word):

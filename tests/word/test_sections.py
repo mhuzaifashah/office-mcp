@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom.exceptions import AnchorNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError
 
 
 def test_sections_len(fake_word):

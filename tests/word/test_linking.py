@@ -10,10 +10,11 @@ is wired in conftest to return the seeded bookmark names / heading texts.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._ops import run_batch
-from wordcom.constants import WdReferenceKind, WdReferenceType
-from wordcom.exceptions import AnchorNotFoundError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.constants import WdReferenceKind, WdReferenceType
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
 
 
 def _addr_dup(fake_word):

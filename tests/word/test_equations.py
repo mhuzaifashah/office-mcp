@@ -10,9 +10,10 @@ LaTeX→MathML hop (pure-Python, runs anywhere).
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom import _equations
-from wordcom.exceptions import AnchorNotFoundError, EquationError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import _equations
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, EquationError, OpError
 
 # ---------------------------------------------------------------------------
 # insert_equation — input validation (raises before any COM call)
@@ -117,7 +118,7 @@ def test_anchor_by_id_equation_bad_index(fake_word):
 
 
 def test_insert_equation_in_op_registries():
-    from wordcom._ops import OP_OPTIONAL_FIELDS, OP_REQUIRED_FIELDS
+    from office_mcp.word.wordcom._ops import OP_OPTIONAL_FIELDS, OP_REQUIRED_FIELDS
 
     assert OP_REQUIRED_FIELDS["insert_equation"] == ("anchor_id",)
     optional = OP_OPTIONAL_FIELDS["insert_equation"]
@@ -126,7 +127,7 @@ def test_insert_equation_in_op_registries():
 
 
 def test_mcp_build_write_op_insert_equation():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     op = _build_write_op(
         "insert_equation",
@@ -142,7 +143,7 @@ def test_mcp_build_write_op_insert_equation():
 
 
 def test_mcp_build_write_op_insert_equation_requires_one_dialect():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     with pytest.raises(OpError, match="exactly one"):
         _build_write_op("insert_equation", {"anchor_id": "heading:1"})

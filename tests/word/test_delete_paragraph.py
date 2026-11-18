@@ -9,9 +9,10 @@ us assert against.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._ops import run_batch, validate_op
-from wordcom.exceptions import AnchorNotFoundError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._ops import run_batch, validate_op
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
 
 # --- the Document method -------------------------------------------------------
 

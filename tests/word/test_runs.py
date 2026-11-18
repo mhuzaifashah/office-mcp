@@ -6,14 +6,15 @@ Pure logic (`wordcom._runs`), no COM, so these run anywhere.
 from __future__ import annotations
 
 import pytest
-from wordcom._runs import (
+
+from office_mcp.word.wordcom._runs import (
     Run,
     normalize_block_items,
     parse_markup,
     runs_from_payload,
     runs_to_text,
 )
-from wordcom.exceptions import OpError
+from office_mcp.word.wordcom.exceptions import OpError
 
 
 def _triples(text: str) -> list[tuple[str, bool | None, bool | None]]:

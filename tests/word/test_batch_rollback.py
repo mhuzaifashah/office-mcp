@@ -5,9 +5,10 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-import wordcom
-from wordcom._ops import run_batch
-from wordcom.exceptions import OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.exceptions import OpError
 
 GOOD = {"op": "insert_break", "anchor_id": "bookmark:Address", "kind": "page"}
 BAD = {"op": "insert_break", "kind": "page"}  # no anchor_id

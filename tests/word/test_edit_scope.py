@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-import wordcom
+
+from office_mcp.word import wordcom
 
 
 def test_edit_opens_and_closes_undo_record(fake_word):

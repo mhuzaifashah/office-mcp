@@ -8,9 +8,10 @@ break at offset 34 — just before the final paragraph mark.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom import EndAnchor
-from wordcom.exceptions import StyleNotFoundError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import EndAnchor
+from office_mcp.word.wordcom.exceptions import StyleNotFoundError
 
 
 def test_append_paragraph_writes_break_then_text_before_final_mark(fake_word):

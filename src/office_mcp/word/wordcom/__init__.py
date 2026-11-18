@@ -2,7 +2,7 @@
 
 Quick start:
 
-    import wordcom as wl
+    from office_mcp.word import wordcom as wl
 
     with wl.attach() as word:
         doc = word.documents.active
@@ -18,7 +18,7 @@ from importlib.metadata import version as _pkg_version
 from . import constants
 
 try:
-    __version__ = _pkg_version("wordcom")
+    __version__ = _pkg_version("office-mcp")
 except PackageNotFoundError:  # running from a source tree with no install metadata
     __version__ = "0.0.0+unknown"
 from ._anchors import (

@@ -8,7 +8,8 @@ from __future__ import annotations
 import math
 
 import pytest
-from wordcom._format import to_bgr, to_points
+
+from office_mcp.word.wordcom._format import to_bgr, to_points
 
 
 class TestToBgr:

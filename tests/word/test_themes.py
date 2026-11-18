@@ -12,10 +12,11 @@ from __future__ import annotations
 import os
 
 import pytest
-import wordcom
-from wordcom._format import bgr_to_hex, to_bgr
-from wordcom._ops import run_batch
-from wordcom.exceptions import OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._format import bgr_to_hex, to_bgr
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.exceptions import OpError
 
 
 def _theme(fake_word):

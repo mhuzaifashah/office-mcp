@@ -12,9 +12,10 @@ from __future__ import annotations
 import base64
 
 import pytest
-import wordcom
-from wordcom import _images
-from wordcom.exceptions import AnchorNotFoundError, ImageSourceError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import _images
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, ImageSourceError, OpError
 
 _SEED_BYTES = b"\x89PNG\r\n\x1a\nSEEDED"
 

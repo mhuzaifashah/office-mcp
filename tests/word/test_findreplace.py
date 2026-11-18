@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._findreplace import find_matches, normalized_equal
-from wordcom.exceptions import (
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._findreplace import find_matches, normalized_equal
+from office_mcp.word.wordcom.exceptions import (
     AmbiguousMatchError,
     AnchorNotFoundError,
     ReplaceVerificationError,

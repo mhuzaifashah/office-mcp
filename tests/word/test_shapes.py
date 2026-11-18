@@ -14,10 +14,11 @@ from __future__ import annotations
 import base64
 
 import pytest
-import wordcom
-from wordcom._dispatch import _build_write_op, _read_impl, _write_impl
-from wordcom._worker import InlineWorker
-from wordcom.exceptions import AnchorNotFoundError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._dispatch import _build_write_op, _read_impl, _write_impl
+from office_mcp.word.wordcom._worker import InlineWorker
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
 
 # A 1x1 transparent PNG (same as test_images).
 _PNG = base64.b64decode(
@@ -40,7 +41,7 @@ def png_file(tmp_path):
 
 
 def test_insert_text_box_returns_shape_anchor(fake_word):
-    from wordcom._anchors import ShapeAnchor
+    from office_mcp.word.wordcom._anchors import ShapeAnchor
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -55,7 +56,7 @@ def test_insert_text_box_returns_shape_anchor(fake_word):
 
 
 def test_insert_image_floating_returns_shape_anchor(fake_word, png_file):
-    from wordcom._anchors import ShapeAnchor
+    from office_mcp.word.wordcom._anchors import ShapeAnchor
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -81,7 +82,7 @@ def _text_box(doc):
 
 
 def test_set_wrap(fake_word):
-    from wordcom.constants import WdWrapType
+    from office_mcp.word.wordcom.constants import WdWrapType
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -103,7 +104,7 @@ def test_set_position_sets_left_top_and_frame(fake_word):
 
 
 def test_set_position_center(fake_word):
-    from wordcom.constants import WdShapePosition
+    from office_mcp.word.wordcom.constants import WdShapePosition
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -355,7 +356,7 @@ def test_mcp_build_replace_shape_image_requires_one_source():
 
 def test_mcp_write_set_shape_wrap(fake_word):
     _write_impl(W, "text_box", {"anchor_id": "bookmark:Address", "text": "Q"})
-    from wordcom.constants import WdWrapType
+    from office_mcp.word.wordcom.constants import WdWrapType
 
     _write_impl(W, "set_shape_wrap", {"anchor_id": "shape:1", "wrap": "behind"})
     assert fake_word.ActiveDocument.Shapes.Item(1).WrapFormat.Type == int(WdWrapType.BEHIND)

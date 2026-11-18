@@ -8,11 +8,12 @@ Also covers the verb-first bookmark / section CLI consolidation.
 from __future__ import annotations
 
 import pytest
-from wordcom import attach
-from wordcom._dispatch import _write_impl
-from wordcom._paths import PathPolicy, reject_nonlocal_image_path
-from wordcom._worker import InlineWorker
-from wordcom.exceptions import OpError, PathNotAllowedError
+
+from office_mcp.word.wordcom import attach
+from office_mcp.word.wordcom._dispatch import _write_impl
+from office_mcp.word.wordcom._paths import PathPolicy, reject_nonlocal_image_path
+from office_mcp.word.wordcom._worker import InlineWorker
+from office_mcp.word.wordcom.exceptions import OpError, PathNotAllowedError
 
 _BS = chr(92)  # a single backslash, unambiguous through every quoting layer
 _UNC = _BS + _BS + "host" + _BS + "share" + _BS + "a.png"

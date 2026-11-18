@@ -14,10 +14,11 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-import wordcom
-from wordcom._anchors import range_text
-from wordcom.constants import WdWrapType
-from wordcom.exceptions import ImageSourceError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._anchors import range_text
+from office_mcp.word.wordcom.constants import WdWrapType
+from office_mcp.word.wordcom.exceptions import ImageSourceError
 
 # A 1x1 transparent PNG.
 _PNG = base64.b64decode(

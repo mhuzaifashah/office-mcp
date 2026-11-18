@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import wordcom
+from office_mcp.word import wordcom
 
 # Bookmark "Address" spans (13, 24) in the fake document.
 TEXT = "body line"

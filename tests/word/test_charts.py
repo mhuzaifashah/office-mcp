@@ -11,10 +11,11 @@ the ops / CLI / MCP request surfaces.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom import _charts
-from wordcom._ops import OP_OPTIONAL_FIELDS, OP_REQUIRED_FIELDS, run_batch
-from wordcom.exceptions import AnchorNotFoundError, ExcelNotAvailableError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import _charts
+from office_mcp.word.wordcom._ops import OP_OPTIONAL_FIELDS, OP_REQUIRED_FIELDS, run_batch
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, ExcelNotAvailableError, OpError
 
 
 @pytest.fixture
@@ -93,8 +94,9 @@ def test_error_bar_amount_required_keys_off_resolved_type():
     # The amount-required check must key off the *resolved* error-bar type, not the
     # raw `kind` string — so alias spellings behave like their canonical forms.
     import pytest
-    from wordcom._charts import add_error_bars
-    from wordcom.exceptions import OpError
+
+    from office_mcp.word.wordcom._charts import add_error_bars
+    from office_mcp.word.wordcom.exceptions import OpError
 
     class _FakeSeries:
         def __init__(self) -> None:
@@ -319,7 +321,7 @@ def test_insert_chart_op_reports_outputs(fake_word, excel_available):
 
 
 def test_mcp_build_write_op_insert_chart():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     op = _build_write_op(
         "insert_chart",
@@ -342,7 +344,7 @@ def test_mcp_build_write_op_insert_chart():
 
 
 def test_mcp_build_write_op_insert_chart_requires_fields():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     with pytest.raises(OpError):
         _build_write_op("insert_chart", {"anchor_id": "end", "kind": "bar"})  # no data
@@ -380,7 +382,7 @@ def test_formatting_vocab_maps_consistent():
 
 
 def test_format_writes_passed_fields_only(fake_word, excel_available):
-    from wordcom._format import to_bgr
+    from office_mcp.word.wordcom._format import to_bgr
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -541,7 +543,7 @@ def test_add_trendline_bad_kind_raises(fake_word, excel_available):
 
 
 def test_set_series_color_series_and_point(fake_word, excel_available):
-    from wordcom._format import to_bgr
+    from office_mcp.word.wordcom._format import to_bgr
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -637,7 +639,7 @@ def test_exec_format_chart_rejects_non_chart_anchor(fake_word):
 
 
 def test_mcp_build_format_ops():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     assert _build_write_op(
         "format_chart", {"anchor_id": "chart:1", "chart_style": 240, "legend": True}
@@ -651,7 +653,7 @@ def test_mcp_build_format_ops():
 
 
 def test_mcp_build_format_ops_require_fields():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     with pytest.raises(OpError):
         _build_write_op("format_axis", {"anchor_id": "chart:1"})  # no which
@@ -696,7 +698,7 @@ def test_format_series_marker_int_passthrough(fake_word, excel_available):
 
 
 def test_format_series_point_explosion_and_label_font(fake_word, excel_available):
-    from wordcom._format import to_bgr
+    from office_mcp.word.wordcom._format import to_bgr
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -849,7 +851,7 @@ def test_exec_format_series_and_error_bars(fake_word, excel_available):
 
 
 def test_mcp_build_pr_c_ops():
-    from wordcom._dispatch import _build_write_op
+    from office_mcp.word.wordcom._dispatch import _build_write_op
 
     assert _build_write_op(
         "format_series", {"anchor_id": "chart:1", "marker": "circle", "marker_size": 8}

@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._format import to_bgr
-from wordcom._ops import run_batch
-from wordcom.constants import (
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._format import to_bgr
+from office_mcp.word.wordcom._ops import run_batch
+from office_mcp.word.wordcom.constants import (
     WdBorderType,
     WdCellVerticalAlignment,
     WdLineStyle,
     WdParagraphAlignment,
     WdRowAlignment,
 )
-from wordcom.exceptions import AnchorNotFoundError, OpError, StyleNotFoundError
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError, StyleNotFoundError
 
 # ---------------------------------------------------------------------------
 # TableCollection
@@ -295,7 +296,7 @@ def test_delete_column_and_column_anchor_surface_operror_on_merged_table(fake_wo
     # TABLES-7: Word raises "mixed cell widths" when addressing a single column on
     # a merged table; both delete_column and ColumnAnchor must re-raise OpError
     # with the per-cell hint. The fake never raises, so make Columns(c) raise.
-    from wordcom.exceptions import ComError
+    from office_mcp.word.wordcom.exceptions import ComError
 
     def _boom(self, col):
         raise ComError("the table has mixed cell widths")
@@ -314,7 +315,7 @@ def test_delete_column_and_column_anchor_surface_operror_on_merged_table(fake_wo
 
 
 def test_merge_across_tables_raises(fake_word):
-    from wordcom._tables import Table
+    from office_mcp.word.wordcom._tables import Table
 
     with wordcom.attach() as word:
         doc = word.documents.active
@@ -664,7 +665,7 @@ def test_exec_create_table_missing_field_fails_cleanly(fake_word):
 
 
 def test_normalize_table_data_records_to_grid():
-    from wordcom._anchors import _normalize_table_data
+    from office_mcp.word.wordcom._anchors import _normalize_table_data
 
     grid, header = _normalize_table_data(
         [{"Item": "Travel", "Cost": "$400"}, {"Item": "Lodging", "Cost": "$600"}]
@@ -674,7 +675,7 @@ def test_normalize_table_data_records_to_grid():
 
 
 def test_normalize_table_data_array_passes_through():
-    from wordcom._anchors import _normalize_table_data
+    from office_mcp.word.wordcom._anchors import _normalize_table_data
 
     grid, header = _normalize_table_data([["a", "b"], ["c", "d"]])
     assert header is False
@@ -682,7 +683,7 @@ def test_normalize_table_data_array_passes_through():
 
 
 def test_normalize_table_data_records_missing_key_is_empty_cell():
-    from wordcom._anchors import _normalize_table_data
+    from office_mcp.word.wordcom._anchors import _normalize_table_data
 
     # First record fixes the columns; a later record missing a key → empty cell.
     grid, _ = _normalize_table_data([{"A": "1", "B": "2"}, {"A": "3"}])
@@ -690,7 +691,7 @@ def test_normalize_table_data_records_missing_key_is_empty_cell():
 
 
 def test_normalize_table_data_mixed_shape_raises():
-    from wordcom._anchors import _normalize_table_data
+    from office_mcp.word.wordcom._anchors import _normalize_table_data
 
     with pytest.raises(OpError, match="mixes"):
         _normalize_table_data([{"A": "1"}, ["B", "2"]])

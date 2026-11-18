@@ -11,10 +11,11 @@ bottom exercises the real rasteriser when PyMuPDF *is* available.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom import _snapshot
-from wordcom.constants import WdExportFormat, WdExportItem, WdExportRange
-from wordcom.exceptions import OpError, SnapshotError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom import _snapshot
+from office_mcp.word.wordcom.constants import WdExportFormat, WdExportItem, WdExportRange
+from office_mcp.word.wordcom.exceptions import OpError, SnapshotError
 
 
 @pytest.fixture

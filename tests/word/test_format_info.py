@@ -10,10 +10,10 @@ and asserts `format_info` flags it.
 
 from __future__ import annotations
 
-import wordcom
-from wordcom._anchors import _line_spacing_repr, _read_font, _read_paragraph_format
-from wordcom._format import to_bgr
-from wordcom.constants import WD_UNDEFINED, WdLineSpacing
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._anchors import _line_spacing_repr, _read_font, _read_paragraph_format
+from office_mcp.word.wordcom._format import to_bgr
+from office_mcp.word.wordcom.constants import WD_UNDEFINED, WdLineSpacing
 
 
 def _addr_range(fake_word):

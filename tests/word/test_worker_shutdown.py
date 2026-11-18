@@ -5,8 +5,9 @@ from __future__ import annotations
 import threading
 
 import pytest
-from wordcom._worker import ComWorker
-from wordcom.exceptions import WordcomError
+
+from office_mcp.word.wordcom._worker import ComWorker
+from office_mcp.word.wordcom.exceptions import WordcomError
 
 
 def _com_threads():

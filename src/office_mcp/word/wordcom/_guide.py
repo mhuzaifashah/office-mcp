@@ -32,7 +32,7 @@ def skill_name(kind: str = "mcp") -> str:
 def bundled_skill(kind: str = "mcp") -> str:
     """The packaged agent skill (SKILL.md) text, frontmatter and all."""
     name = skill_name(kind)
-    return (files("wordcom") / "_skill" / name / "SKILL.md").read_text(encoding="utf-8")
+    return (files(__package__) / "_skill" / name / "SKILL.md").read_text(encoding="utf-8")
 
 
 def strip_frontmatter(md: str) -> str:

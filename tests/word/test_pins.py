@@ -10,16 +10,17 @@ fixed offsets and never shifts them.
 from __future__ import annotations
 
 import pytest
-import wordcom
-from wordcom._ops import _resolve_op_refs, run_batch
-from wordcom.exceptions import AnchorNotFoundError, OpError
+
+from office_mcp.word import wordcom
+from office_mcp.word.wordcom._ops import _resolve_op_refs, run_batch
+from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
 
 
 @pytest.fixture
 def codes(monkeypatch: pytest.MonkeyPatch):
     """Deterministic pin codes: code1, code2, … (patches `_new_pin_code`)."""
     counter = iter(f"code{i}" for i in range(1, 1000))
-    monkeypatch.setattr("wordcom._document._new_pin_code", lambda: next(counter))
+    monkeypatch.setattr("office_mcp.word.wordcom._document._new_pin_code", lambda: next(counter))
 
 
 # ---------------------------------------------------------------------------

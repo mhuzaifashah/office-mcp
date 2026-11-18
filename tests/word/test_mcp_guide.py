@@ -11,9 +11,9 @@ from __future__ import annotations
 import inspect
 import re
 
-from wordcom import _dispatch
-from wordcom._guide import skill_body
-from wordcom._ops import OP_REQUIRED_FIELDS
+from office_mcp.word.wordcom import _dispatch
+from office_mcp.word.wordcom._guide import skill_body
+from office_mcp.word.wordcom._ops import OP_REQUIRED_FIELDS
 
 GUIDE = skill_body("mcp")
 ROWS = [line for line in GUIDE.splitlines() if line.startswith("| `")]

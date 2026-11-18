@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from wordcom._document import Document
+from office_mcp.word.wordcom._document import Document
 
 
 class _Model:

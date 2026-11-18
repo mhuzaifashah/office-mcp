@@ -11,7 +11,8 @@ import base64
 import contextlib
 
 import pytest
-import wordcom
+
+from office_mcp.word import wordcom
 
 pytestmark = pytest.mark.smoke
 
@@ -405,7 +406,7 @@ def test_format_paragraph_pagination_flags(scratch_doc):
 
 def test_format_paragraph_line_spacing(scratch_doc):
     """line_spacing sets the leading: a multiple, an exact length, or a keyword."""
-    from wordcom.constants import WdLineSpacing
+    from office_mcp.word.wordcom.constants import WdLineSpacing
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -432,7 +433,7 @@ def test_format_paragraph_line_spacing(scratch_doc):
 def test_drop_cap_roundtrip(scratch_doc):
     """drop_cap sets a real Word DropCap (position + geometry stick), and
     position='none' removes it."""
-    from wordcom.constants import WdDropPosition
+    from office_mcp.word.wordcom.constants import WdDropPosition
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -677,7 +678,7 @@ def test_save_as_and_export_pdf_roundtrip(scratch_doc, tmp_path):
 
 def test_save_gating_blocks_outside_whitelist(scratch_doc, tmp_path):
     """The CLI/MCP path policy denies a save outside the whitelist (resolve-first)."""
-    from wordcom._paths import PathPolicy
+    from office_mcp.word.wordcom._paths import PathPolicy
 
     allowed = tmp_path / "allowed"
     allowed.mkdir()
@@ -1041,7 +1042,7 @@ def test_display_equation_uses_equation_style_not_following_heading(scratch_doc)
 def test_inline_equation_is_normal_and_left_aligned(scratch_doc):
     """WL-D: a display=False equation lands on its own paragraph but reads as
     body text — Normal style, left-aligned — not centred, not a heading."""
-    from wordcom.constants import WdParagraphAlignment
+    from office_mcp.word.wordcom.constants import WdParagraphAlignment
 
     doc = scratch_doc
     _seed_body_then_heading(doc)
@@ -1376,7 +1377,7 @@ def test_set_style_restyles_existing_table(scratch_doc):
 
 def test_set_alignment_and_banding_and_borders(scratch_doc):
     """Whole-table alignment, banding flags, and grid borders all apply live."""
-    from wordcom.constants import WdRowAlignment
+    from office_mcp.word.wordcom.constants import WdRowAlignment
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -1407,7 +1408,7 @@ def test_cell_vertical_alignment_bottom_renders(scratch_doc):
 def test_row_anchor_shades_whole_row_politely(scratch_doc):
     """table:N:row:R styles the entire row through the inherited verbs, and the
     user's Selection survives (politeness)."""
-    from wordcom._format import to_bgr
+    from office_mcp.word.wordcom._format import to_bgr
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -1426,7 +1427,7 @@ def test_row_anchor_shades_whole_row_politely(scratch_doc):
 
 def test_column_anchor_styles_each_cell_on_regular_table(scratch_doc):
     """On a regular table, table:N:col:C fans styling across the column's cells."""
-    from wordcom._format import to_bgr
+    from office_mcp.word.wordcom._format import to_bgr
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -1442,7 +1443,7 @@ def test_column_anchor_on_merged_table_raises_operror(scratch_doc):
     """The headline fragility: a column op on a merged / mixed-width table has no
     per-column model in Word, so it raises a clean OpError pointing at per-cell
     styling — not a raw COM 'mixed cell widths' error."""
-    from wordcom.exceptions import OpError
+    from office_mcp.word.wordcom.exceptions import OpError
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -1483,7 +1484,7 @@ def test_delete_column_removes_a_column(scratch_doc):
 def test_delete_column_on_merged_table_raises_operror(scratch_doc):
     """delete_column on a merged / mixed-width table raises a clean OpError
     (Word can't address an individual column there) — not a raw COM error."""
-    from wordcom.exceptions import OpError
+    from office_mcp.word.wordcom.exceptions import OpError
 
     doc = scratch_doc
     with doc.edit("seed"):
@@ -1525,7 +1526,7 @@ def test_merge_collapses_to_upper_left_regardless_of_receiver(scratch_doc):
     for ch in ("A", "B", "C", "D"):
         assert ch in merged
     # …and the bottom-right coordinate no longer resolves.
-    from wordcom.exceptions import AnchorNotFoundError
+    from office_mcp.word.wordcom.exceptions import AnchorNotFoundError
 
     with pytest.raises(AnchorNotFoundError):
         _ = t.cell(2, 2).text
