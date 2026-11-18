@@ -1307,7 +1307,13 @@ def run_batch(
     with tracking, doc.edit(label) as scope:
         for i, op in enumerate(ops):
             try:
-                out = apply_op(doc, _resolve_op_refs(op, results_by_index))
+                try:
+                    out = apply_op(doc, _resolve_op_refs(op, results_by_index))
+                except (ValueError, TypeError) as exc:
+                    # Bad input surfaced by a conversion or a validator (`int("x")`,
+                    # an unknown alignment name). Report it like any other bad op so
+                    # the batch fails cleanly and rolls back instead of escaping.
+                    raise OpError(f"op {op.get('op')!r}: {exc}") from exc
             except WordcomError as exc:
                 failure_exc = exc
                 failure_meta = {

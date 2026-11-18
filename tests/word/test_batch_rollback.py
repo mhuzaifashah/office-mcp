@@ -91,3 +91,25 @@ def test_controller_exec_attaches_failure_to_error(monkeypatch):
     assert info.value.failure == failure
     assert info.value.ops_run == 2
     assert info.value.rolled_back is True
+
+
+# W20: a ValueError/TypeError from bad input fails the batch cleanly.
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"op": "set_cell", "table": 1, "row": "abc", "col": 1, "text": "x"},  # TypeError
+        {"op": "apply_list", "anchor_id": "bookmark:Address", "type": "zigzag"},  # ValueError
+    ],
+)
+def test_value_error_becomes_structured_failure_and_rolls_back(fake_word, bad):
+    fake_word.ActiveDocument.Undo.return_value = True
+    result, exc = _run([GOOD, bad])
+    assert isinstance(exc, OpError)
+    assert result["ok"] is False
+    assert result["failure"]["index"] == 1
+    assert result["failure"]["type"] == "OpError"
+    assert isinstance(exc.__cause__, (ValueError, TypeError))
+    assert result["rolled_back"] is True
+    fake_word.ActiveDocument.Undo.assert_called_once_with(1)
