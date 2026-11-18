@@ -157,27 +157,27 @@ def test_op_set_hyperlink_no_fields_fails(fake_word):
 
 def test_mcp_hyperlinks(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_read
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
-    rows = _read_impl(InlineWorker(), "hyperlinks", {})
+    rows = dispatch_read(InlineWorker(), "hyperlinks", {})
     assert rows[0]["text"] == "Acme"
 
 
 def test_mcp_set_hyperlink_aliases_url(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
     # MCP vocabulary parity: url -> address, bookmark -> sub_address.
-    op = _build_write_op("set_hyperlink", {"index": 1, "url": "https://m.example"})
+    op = write_command_to_op("set_hyperlink", {"index": 1, "url": "https://m.example"})
     assert op == {"op": "set_hyperlink", "index": 1, "address": "https://m.example"}
-    op2 = _build_write_op("set_hyperlink", {"index": 2, "bookmark": "Risks"})
+    op2 = write_command_to_op("set_hyperlink", {"index": 2, "bookmark": "Risks"})
     assert op2 == {"op": "set_hyperlink", "index": 2, "sub_address": "Risks"}
 
 
 def test_mcp_set_hyperlink_no_fields_raises(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
     with pytest.raises(OpError):
-        _build_write_op("set_hyperlink", {"index": 1})
+        write_command_to_op("set_hyperlink", {"index": 1})

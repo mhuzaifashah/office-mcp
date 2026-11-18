@@ -320,10 +320,10 @@ def test_insert_chart_op_reports_outputs(fake_word, excel_available):
 # ---------------------------------------------------------------------------
 
 
-def test_mcp_build_write_op_insert_chart():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+def test_write_command_to_op_insert_chart():
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    op = _build_write_op(
+    op = write_command_to_op(
         "insert_chart",
         {
             "anchor_id": "end",
@@ -343,13 +343,13 @@ def test_mcp_build_write_op_insert_chart():
     }
 
 
-def test_mcp_build_write_op_insert_chart_requires_fields():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+def test_write_command_to_op_insert_chart_requires_fields():
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
     with pytest.raises(OpError):
-        _build_write_op("insert_chart", {"anchor_id": "end", "kind": "bar"})  # no data
+        write_command_to_op("insert_chart", {"anchor_id": "end", "kind": "bar"})  # no data
     with pytest.raises(OpError):
-        _build_write_op("insert_chart", {"anchor_id": "end", "data": {"a": 1}})  # no kind
+        write_command_to_op("insert_chart", {"anchor_id": "end", "data": {"a": 1}})  # no kind
 
 
 # ---------------------------------------------------------------------------
@@ -639,26 +639,26 @@ def test_exec_format_chart_rejects_non_chart_anchor(fake_word):
 
 
 def test_mcp_build_format_ops():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    assert _build_write_op(
+    assert write_command_to_op(
         "format_chart", {"anchor_id": "chart:1", "chart_style": 240, "legend": True}
     ) == {"op": "format_chart", "anchor_id": "chart:1", "chart_style": 240, "legend": True}
-    assert _build_write_op(
+    assert write_command_to_op(
         "format_axis", {"anchor_id": "chart:1", "which": "value", "scale": "log"}
     ) == {"op": "format_axis", "anchor_id": "chart:1", "which": "value", "scale": "log"}
-    assert _build_write_op(
+    assert write_command_to_op(
         "set_series_color", {"anchor_id": "chart:1", "color": "red", "point": 2}
     ) == {"op": "set_series_color", "anchor_id": "chart:1", "color": "red", "point": 2}
 
 
 def test_mcp_build_format_ops_require_fields():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
     with pytest.raises(OpError):
-        _build_write_op("format_axis", {"anchor_id": "chart:1"})  # no which
+        write_command_to_op("format_axis", {"anchor_id": "chart:1"})  # no which
     with pytest.raises(OpError):
-        _build_write_op("set_series_color", {"anchor_id": "chart:1"})  # no color
+        write_command_to_op("set_series_color", {"anchor_id": "chart:1"})  # no color
 
 
 # --- CLI --------------------------------------------------------------------
@@ -851,11 +851,11 @@ def test_exec_format_series_and_error_bars(fake_word, excel_available):
 
 
 def test_mcp_build_pr_c_ops():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    assert _build_write_op(
+    assert write_command_to_op(
         "format_series", {"anchor_id": "chart:1", "marker": "circle", "marker_size": 8}
     ) == {"op": "format_series", "anchor_id": "chart:1", "marker": "circle", "marker_size": 8}
-    assert _build_write_op(
+    assert write_command_to_op(
         "add_error_bars", {"anchor_id": "chart:1", "kind": "percent", "amount": 5}
     ) == {"op": "add_error_bars", "anchor_id": "chart:1", "kind": "percent", "amount": 5}

@@ -304,9 +304,9 @@ def test_exec_drop_cap(fake_word):
 
 
 def test_mcp_build_drop_cap_op():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    op = _build_write_op(
+    op = write_command_to_op(
         "drop_cap", {"anchor_id": "para:2", "position": "margin", "lines": 3, "font": "Georgia"}
     )
     assert op == {

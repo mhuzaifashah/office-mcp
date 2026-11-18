@@ -1,11 +1,11 @@
 """Op-dispatch layer: four entry points over a single COM worker thread.
 
-  - `_read_impl(command, p)`     — every read, dispatched on `command`.
-  - `_write_impl(command, p)`    — every single atomic-undo write, on `command`.
-  - `_exec_impl(ops)`            — apply a batch of ops as one atomic undo.
-  - `_snapshot_impl(...)`        — render page(s) to PNG so the model can *see* it.
+  - `dispatch_read(command, p)`     — every read, dispatched on `command`.
+  - `dispatch_write(command, p)`    — every single atomic-undo write, on `command`.
+  - `dispatch_exec(ops)`            — apply a batch of ops as one atomic undo.
+  - `dispatch_snapshot(...)`        — render page(s) to PNG so the model can *see* it.
 
-`WordController` (the action layer) calls these four. `_build_write_op`
+`WordController` (the action layer) calls these four. `write_command_to_op`
 maps friendly params to a single `apply_op` op dict. The op vocabulary and the
 anchor model are documented in the bundled `_skill/` guides.
 
@@ -49,7 +49,7 @@ def _need(p: dict[str, Any], key: str, command: str) -> Any:
     return value
 
 
-def _read_impl(worker: Worker, command: str, p: dict[str, Any]) -> Any:
+def dispatch_read(worker: Worker, command: str, p: dict[str, Any]) -> Any:
     if command == "guide":
         # The agent guide for the MCP tools (anchor model + full op vocabulary).
         # Needs neither Word nor the worker thread.
@@ -233,7 +233,7 @@ def _read_impl(worker: Worker, command: str, p: dict[str, Any]) -> Any:
     return worker.run_on_word(job)
 
 
-def _build_write_op(command: str, p: dict[str, Any]) -> dict[str, Any]:
+def write_command_to_op(command: str, p: dict[str, Any]) -> dict[str, Any]:
     """Translate a write command + params into a single `apply_op` op dict."""
 
     def need(key: str) -> Any:
@@ -994,7 +994,7 @@ def _build_write_op(command: str, p: dict[str, Any]) -> dict[str, Any]:
     raise OpError(f"unknown write command: {command!r}")
 
 
-def _write_impl(
+def dispatch_write(
     worker: Worker, command: str, p: dict[str, Any], *, policy: PathPolicy | None = None
 ) -> dict[str, Any]:
     # Default to a deny-all policy: saving is off and non-local image paths are
@@ -1026,7 +1026,7 @@ def _write_impl(
                     target, from_page=p.get("from_page"), to_page=p.get("to_page")
                 )
                 return {"ok": True, "command": "export_pdf", "path": written}
-            op = _build_write_op(command, p)
+            op = write_command_to_op(command, p)
             # Screen an insert_image op's path before it reaches COM/filesystem
             # (a UNC path's existence probe would authenticate to a remote SMB host).
             policy.screen_op_image_paths([op])
@@ -1046,7 +1046,7 @@ def _write_impl(
     return worker.run_on_word(job)
 
 
-def _exec_impl(
+def dispatch_exec(
     worker: Worker,
     ops: list[dict[str, Any]],
     *,
@@ -1084,7 +1084,7 @@ def _parse_pages(pages: str | None) -> int | tuple[int, int] | None:
         raise OpError(f"invalid pages value: {pages!r}") from e
 
 
-def _snapshot_impl(
+def dispatch_snapshot(
     worker: Worker,
     *,
     doc: str | None,

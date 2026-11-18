@@ -110,15 +110,15 @@ def test_op_set_and_delete_property(fake_word):
 
 def test_mcp_properties(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _read_impl, _write_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_read, dispatch_write
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     w = InlineWorker()
-    data = _read_impl(w, "properties", {})
+    data = dispatch_read(w, "properties", {})
     assert data["builtin"]["Title"] == "Quarterly Report"
-    r = _write_impl(w, "set_property", {"name": "Title", "value": "Z"})
+    r = dispatch_write(w, "set_property", {"name": "Title", "value": "Z"})
     assert r["ok"]
-    r = _write_impl(w, "set_property", {"name": "K", "value": "v", "custom": True})
+    r = dispatch_write(w, "set_property", {"name": "K", "value": "v", "custom": True})
     assert r["ok"]
-    r = _write_impl(w, "delete_property", {"name": "Project"})
+    r = dispatch_write(w, "delete_property", {"name": "Project"})
     assert r["ok"]

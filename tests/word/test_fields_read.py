@@ -87,8 +87,8 @@ def test_index_out_of_range(fake_word):
 
 def test_mcp_fields(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_read
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
-    rows = _read_impl(InlineWorker(), "fields", {})
+    rows = dispatch_read(InlineWorker(), "fields", {})
     assert rows[0]["kind"] == "PAGE"

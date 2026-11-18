@@ -11,7 +11,7 @@ import pytest
 
 from office_mcp.word.wordcom import attach
 from office_mcp.word.wordcom.exceptions import OpError, PathNotAllowedError
-from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+from office_mcp.word.wordcom.runtime._dispatch import dispatch_write
 from office_mcp.word.wordcom.runtime._path_policy import PathPolicy, reject_nonlocal_image_path
 from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
@@ -172,17 +172,19 @@ class TestDocumentPersistence:
 class TestPersistenceMcp:
     def test_save_as_deny_all(self, fake_word):
         with pytest.raises(PathNotAllowedError):
-            _write_impl(InlineWorker(), "save_as", {"path": "C:/whatever/x.docx"})
+            dispatch_write(InlineWorker(), "save_as", {"path": "C:/whatever/x.docx"})
 
     def test_save_as_whitelisted(self, fake_word, tmp_path):
         pol = PathPolicy(save_dirs=[tmp_path])
-        out = _write_impl(InlineWorker(), "save_as", {"path": str(tmp_path / "x.docx")}, policy=pol)
+        out = dispatch_write(
+            InlineWorker(), "save_as", {"path": str(tmp_path / "x.docx")}, policy=pol
+        )
         assert out["ok"] is True
         assert out["command"] == "save_as"
 
     def test_export_pdf_whitelisted(self, fake_word, tmp_path):
         pol = PathPolicy(save_dirs=[tmp_path])
-        out = _write_impl(
+        out = dispatch_write(
             InlineWorker(), "export_pdf", {"path": str(tmp_path / "x.pdf")}, policy=pol
         )
         assert out["ok"] is True

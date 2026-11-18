@@ -79,7 +79,7 @@ def test_controller_exec_attaches_failure_to_error(monkeypatch):
     err = OpError("boom")
     monkeypatch.setattr(
         controller_mod,
-        "_exec_impl",
+        "dispatch_exec",
         lambda *a, **k: ({"ok": False, "ops_run": 2, "failure": failure, "rolled_back": True}, err),
     )
     ctl = object.__new__(WordController)

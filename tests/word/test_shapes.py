@@ -17,7 +17,11 @@ import pytest
 
 from office_mcp.word import wordcom
 from office_mcp.word.wordcom.exceptions import AnchorNotFoundError, OpError
-from office_mcp.word.wordcom.runtime._dispatch import _build_write_op, _read_impl, _write_impl
+from office_mcp.word.wordcom.runtime._dispatch import (
+    dispatch_read,
+    dispatch_write,
+    write_command_to_op,
+)
 from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
 # A 1x1 transparent PNG (same as test_images).
@@ -330,13 +334,13 @@ def test_body_name_prefixed_watermark_excluded(fake_word):
 
 
 def test_mcp_read_shapes(fake_word):
-    _write_impl(W, "text_box", {"anchor_id": "bookmark:Address", "text": "Q"})
-    rows = _read_impl(W, "shapes", {})
+    dispatch_write(W, "text_box", {"anchor_id": "bookmark:Address", "text": "Q"})
+    rows = dispatch_read(W, "shapes", {})
     assert rows[0]["anchor_id"] == "shape:1"
 
 
 def test_mcp_build_set_shape_position_op():
-    op = _build_write_op(
+    op = write_command_to_op(
         "set_shape_position", {"anchor_id": "shape:1", "left": "1in", "relative_to": "page"}
     )
     assert op == {
@@ -349,16 +353,16 @@ def test_mcp_build_set_shape_position_op():
 
 def test_mcp_build_replace_shape_image_requires_one_source():
     with pytest.raises(OpError):
-        _build_write_op("replace_shape_image", {"anchor_id": "shape:1"})
-    op = _build_write_op("replace_shape_image", {"anchor_id": "shape:1", "image_base64": _B64})
+        write_command_to_op("replace_shape_image", {"anchor_id": "shape:1"})
+    op = write_command_to_op("replace_shape_image", {"anchor_id": "shape:1", "image_base64": _B64})
     assert op == {"op": "replace_shape_image", "anchor_id": "shape:1", "base64": _B64}
 
 
 def test_mcp_write_set_shape_wrap(fake_word):
-    _write_impl(W, "text_box", {"anchor_id": "bookmark:Address", "text": "Q"})
+    dispatch_write(W, "text_box", {"anchor_id": "bookmark:Address", "text": "Q"})
     from office_mcp.word.wordcom.constants import WdWrapType
 
-    _write_impl(W, "set_shape_wrap", {"anchor_id": "shape:1", "wrap": "behind"})
+    dispatch_write(W, "set_shape_wrap", {"anchor_id": "shape:1", "wrap": "behind"})
     assert fake_word.ActiveDocument.Shapes.Item(1).WrapFormat.Type == int(WdWrapType.BEHIND)
 
 
@@ -534,20 +538,20 @@ def test_textbox_alias_unknown_raises(fake_word):
 
 def test_mcp_build_set_shape_rotation_needs_degrees():
     with pytest.raises(OpError):
-        _build_write_op("set_shape_rotation", {"anchor_id": "shape:1"})
-    op = _build_write_op("set_shape_rotation", {"anchor_id": "shape:1", "degrees": 30})
+        write_command_to_op("set_shape_rotation", {"anchor_id": "shape:1"})
+    op = write_command_to_op("set_shape_rotation", {"anchor_id": "shape:1", "degrees": 30})
     assert op == {"op": "set_shape_rotation", "anchor_id": "shape:1", "degrees": 30}
 
 
 def test_mcp_build_group_shapes_requires_two():
     with pytest.raises(OpError):
-        _build_write_op("group_shapes", {"shapes": ["shape:1"]})
-    op = _build_write_op("group_shapes", {"shapes": ["shape:1", "shape:2"]})
+        write_command_to_op("group_shapes", {"shapes": ["shape:1"]})
+    op = write_command_to_op("group_shapes", {"shapes": ["shape:1", "shape:2"]})
     assert op == {"op": "group_shapes", "shapes": ["shape:1", "shape:2"]}
 
 
 def test_mcp_build_set_image_size_op():
-    op = _build_write_op("set_image_size", {"anchor_id": "image:1", "width": "2in"})
+    op = write_command_to_op("set_image_size", {"anchor_id": "image:1", "width": "2in"})
     assert op == {"op": "set_image_size", "anchor_id": "image:1", "width": "2in"}
 
 
@@ -595,7 +599,7 @@ def test_shapes_list_includes_wrap_side_and_crop(fake_word):
 
 
 def test_mcp_build_set_shape_wrap_op_optional_wrap():
-    op = _build_write_op(
+    op = write_command_to_op(
         "set_shape_wrap", {"anchor_id": "shape:1", "side": "left", "distance_top": "0.1in"}
     )
     assert op == {
@@ -660,12 +664,12 @@ def test_image_set_crop(fake_word):
 
 
 def test_mcp_build_set_shape_crop_maps_crop_params():
-    op = _build_write_op(
+    op = write_command_to_op(
         "set_shape_crop", {"anchor_id": "shape:1", "crop_left": "0.2in", "crop_bottom": 3}
     )
     assert op == {"op": "set_shape_crop", "anchor_id": "shape:1", "left": "0.2in", "bottom": 3}
 
 
 def test_mcp_build_set_image_crop_maps_crop_params():
-    op = _build_write_op("set_image_crop", {"anchor_id": "image:1", "crop_right": 4})
+    op = write_command_to_op("set_image_crop", {"anchor_id": "image:1", "crop_right": 4})
     assert op == {"op": "set_image_crop", "anchor_id": "image:1", "right": 4}

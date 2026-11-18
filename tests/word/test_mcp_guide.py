@@ -30,7 +30,7 @@ def _rows_for(op: str) -> list[str]:
 
 
 def _read_commands() -> set[str]:
-    src = inspect.getsource(_dispatch._read_impl)
+    src = inspect.getsource(_dispatch.dispatch_read)
     return set(re.findall(r'command == "([a-z_]+)"', src))
 
 
@@ -78,6 +78,6 @@ def test_every_read_command_is_documented():
 
 
 def test_guide_read_serves_the_mcp_guide():
-    out = _dispatch._read_impl(None, "guide", {})  # needs no worker
+    out = _dispatch.dispatch_read(None, "guide", {})  # needs no worker
     assert out["guide"] == GUIDE
     assert "exec" in GUIDE and "rolled_back" in GUIDE

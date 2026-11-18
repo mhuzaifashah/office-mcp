@@ -15,7 +15,7 @@ import pytest
 from office_mcp.word import wordcom
 from office_mcp.word.wordcom.exceptions import OpError
 from office_mcp.word.wordcom.model._anchors import RangeAnchor
-from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+from office_mcp.word.wordcom.runtime._dispatch import dispatch_write
 from office_mcp.word.wordcom.runtime._ops import run_batch
 from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
@@ -231,21 +231,21 @@ class TestComposeOps:
 
 class TestComposeMcp:
     def test_insert_section(self, fake_word: Any) -> None:
-        r = _write_impl(
+        r = dispatch_write(
             W, "insert_section", {"anchor_id": "heading:1", "heading": "H", "body": ["b1"]}
         )
         assert r["ok"] is True and r["command"] == "insert_section"
 
     def test_insert_markdown(self, fake_word: Any) -> None:
-        r = _write_impl(W, "insert_markdown", {"anchor_id": "heading:1", "markdown": "# H\n- a"})
+        r = dispatch_write(W, "insert_markdown", {"anchor_id": "heading:1", "markdown": "# H\n- a"})
         assert r["ok"] is True and r["command"] == "insert_markdown"
 
     def test_replace_section(self, fake_word: Any) -> None:
-        r = _write_impl(W, "replace_section", {"anchor_id": "heading:1", "markdown": "body"})
+        r = dispatch_write(W, "replace_section", {"anchor_id": "heading:1", "markdown": "body"})
         assert r["ok"] is True and r["command"] == "replace_section"
 
     def test_replace_section_both_inputs_errors(self, fake_word: Any) -> None:
         with pytest.raises(Exception, match="exactly one of 'body' or 'markdown'"):
-            _write_impl(
+            dispatch_write(
                 W, "replace_section", {"anchor_id": "heading:1", "body": [], "markdown": "x"}
             )

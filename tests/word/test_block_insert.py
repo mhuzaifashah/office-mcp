@@ -15,7 +15,7 @@ import pytest
 from office_mcp.word import wordcom
 from office_mcp.word.wordcom.exceptions import OpError, StyleNotFoundError
 from office_mcp.word.wordcom.model._anchors import RangeAnchor
-from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+from office_mcp.word.wordcom.runtime._dispatch import dispatch_write
 from office_mcp.word.wordcom.runtime._ops import run_batch
 from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
@@ -158,7 +158,7 @@ class TestInsertBlockOp:
 
 class TestInsertBlockMcp:
     def test_insert_block(self, fake_word: Any) -> None:
-        r = _write_impl(
+        r = dispatch_write(
             W,
             "insert_block",
             {"anchor_id": "heading:1", "items": ["a", {"text": "**b**"}]},
@@ -166,9 +166,9 @@ class TestInsertBlockMcp:
         assert r["ok"] is True and r["command"] == "insert_block"
 
     def test_insert_with_runs(self, fake_word: Any) -> None:
-        r = _write_impl(W, "insert", {"anchor_id": "heading:1", "runs": [{"text": "x"}]})
+        r = dispatch_write(W, "insert", {"anchor_id": "heading:1", "runs": [{"text": "x"}]})
         assert r["ok"] is True
 
     def test_insert_text_and_runs_errors(self, fake_word: Any) -> None:
         with pytest.raises(Exception, match="exactly one of 'text' or 'runs'"):
-            _write_impl(W, "insert", {"anchor_id": "end", "text": "a", "runs": [{"text": "b"}]})
+            dispatch_write(W, "insert", {"anchor_id": "end", "text": "a", "runs": [{"text": "b"}]})

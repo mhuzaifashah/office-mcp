@@ -259,13 +259,13 @@ def test_mcp_read_lint_and_format_info(fake_word):
     import pytest
 
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_read
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     w = InlineWorker()
-    findings = _read_impl(w, "lint", {"rules": ["heading-keep-with-next"]})
+    findings = dispatch_read(w, "lint", {"rules": ["heading-keep-with-next"]})
     assert {f["anchor_id"] for f in findings} == {"heading:1", "heading:3"}
-    info = _read_impl(w, "format_info", {"anchor_id": "heading:1"})
+    info = dispatch_read(w, "format_info", {"anchor_id": "heading:1"})
     assert info["style"] == "Normal"
 
 
@@ -273,9 +273,9 @@ def test_mcp_write_regularize(fake_word):
     import pytest
 
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_write
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
-    out = _write_impl(InlineWorker(), "regularize", {"rules": ["heading-keep-with-next"]})
+    out = dispatch_write(InlineWorker(), "regularize", {"rules": ["heading-keep-with-next"]})
     assert out["ok"] is True
     assert len(out["result"]["applied"]) == 2

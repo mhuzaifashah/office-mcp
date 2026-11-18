@@ -10,10 +10,10 @@ dispatch entry points reuse the vendored op-dispatch impls verbatim
 (`wordcom/_dispatch.py`, relocated out of upstream's `mcp/server.py` with the
 FastMCP shell stripped):
 
-    read(command, **params)   -> wordcom.runtime._dispatch._read_impl     (introspection)
-    write(command, **params)  -> wordcom.runtime._dispatch._write_impl    (one op, atomic undo)
-    exec(ops, ...)            -> wordcom.runtime._dispatch._exec_impl      (batch, one undo)
-    snapshot(...)             -> wordcom.runtime._dispatch._snapshot_impl  (page/anchor -> PNG)
+    read(command, **params)   -> wordcom.runtime._dispatch.dispatch_read     (introspection)
+    write(command, **params)  -> wordcom.runtime._dispatch.dispatch_write    (one op, atomic undo)
+    exec(ops, ...)            -> wordcom.runtime._dispatch.dispatch_exec      (batch, one undo)
+    snapshot(...)             -> wordcom.runtime._dispatch.dispatch_snapshot  (page/anchor -> PNG)
 
 The op param shapes are exactly those documented by upstream `wordcom` (and its
 `_skill/` SKILL.md guides). Server/tool layers are built on top of this class.
@@ -27,10 +27,10 @@ from typing import Any
 from .wordcom.exceptions import WordNotRunningError
 from .wordcom.runtime import _com
 from .wordcom.runtime._dispatch import (
-    _exec_impl,
-    _read_impl,
-    _snapshot_impl,
-    _write_impl,
+    dispatch_exec,
+    dispatch_read,
+    dispatch_snapshot,
+    dispatch_write,
 )
 from .wordcom.runtime._path_policy import PathPolicy, reject_nonlocal_path
 from .wordcom.runtime._worker import ComWorker, call_timeout_from_env
@@ -151,14 +151,14 @@ class WordController:
 
     def read(self, command: str, /, **params: Any) -> Any:
         """Read-only introspection (`outline`, `status`, `find`, `read_text`, …)."""
-        return _read_impl(self._worker, command, params)
+        return dispatch_read(self._worker, command, params)
 
     def write(self, command: str, /, **params: Any) -> dict[str, Any]:
         """Apply a single op as one atomic undo (`insert`, `replace`, `add_table`, …).
 
         `save`/`save_as`/`export_pdf` are gated by the controller's `PathPolicy`.
         """
-        return _write_impl(self._worker, command, params, policy=self._policy)
+        return dispatch_write(self._worker, command, params, policy=self._policy)
 
     def exec(
         self,
@@ -174,7 +174,7 @@ class WordController:
         raised with the batch result attached: `exc.failure` (index, op, error,
         type), `exc.ops_run` and `exc.rolled_back`.
         """
-        result, exc = _exec_impl(
+        result, exc = dispatch_exec(
             self._worker, ops, doc=doc, label=label, tracked=tracked, policy=self._policy
         )
         if exc is not None:
@@ -200,7 +200,7 @@ class WordController:
         (PyMuPDF). `pages` is ``"4"`` or ``"2-5"``; `anchor` is an anchor id like
         ``"heading:3"``.
         """
-        return _snapshot_impl(
+        return dispatch_snapshot(
             self._worker,
             doc=doc,
             pages=pages,

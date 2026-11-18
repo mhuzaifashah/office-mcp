@@ -81,10 +81,10 @@ def test_op_set_and_delete_variable(fake_word):
 
 def test_mcp_variables(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _read_impl, _write_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_read, dispatch_write
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
     w = InlineWorker()
-    assert _read_impl(w, "variables", {}) == {"ClientName": "Acme"}
-    assert _write_impl(w, "set_variable", {"name": "R", "value": "EU"})["ok"]
-    assert _write_impl(w, "delete_variable", {"name": "ClientName"})["ok"]
+    assert dispatch_read(w, "variables", {}) == {"ClientName": "Acme"}
+    assert dispatch_write(w, "set_variable", {"name": "R", "value": "EU"})["ok"]
+    assert dispatch_write(w, "delete_variable", {"name": "ClientName"})["ok"]

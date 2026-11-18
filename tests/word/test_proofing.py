@@ -68,9 +68,9 @@ def test_proofing_unavailable_is_graceful(monkeypatch):
 
 def test_mcp_proofing(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _read_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_read
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
-    data = _read_impl(InlineWorker(), "proofing", {})
+    data = dispatch_read(InlineWorker(), "proofing", {})
     assert data["spelling"]["count"] == 1
     assert data["readability"]["flesch_kincaid_grade_level"] == 7.2

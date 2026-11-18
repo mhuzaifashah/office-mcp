@@ -158,23 +158,23 @@ def test_op_set_cc_on_wrong_anchor_fails(fake_word):
 
 def test_mcp_build_set_cc_properties(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    op = _build_write_op("set_cc_properties", {"anchor_id": "cc:Signatory", "title": "Z"})
+    op = write_command_to_op("set_cc_properties", {"anchor_id": "cc:Signatory", "title": "Z"})
     assert op == {"op": "set_cc_properties", "anchor_id": "cc:Signatory", "title": "Z"}
 
 
 def test_mcp_build_set_cc_properties_no_fields_raises(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
     with pytest.raises(OpError):
-        _build_write_op("set_cc_properties", {"anchor_id": "cc:Signatory"})
+        write_command_to_op("set_cc_properties", {"anchor_id": "cc:Signatory"})
 
 
 def test_mcp_build_set_cc_items(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    op = _build_write_op("set_cc_items", {"anchor_id": "cc:Priority", "items": ["a", "b"]})
+    op = write_command_to_op("set_cc_items", {"anchor_id": "cc:Priority", "items": ["a", "b"]})
     assert op == {"op": "set_cc_items", "anchor_id": "cc:Priority", "items": ["a", "b"]}

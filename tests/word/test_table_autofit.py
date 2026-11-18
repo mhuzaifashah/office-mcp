@@ -95,9 +95,9 @@ def test_op_autofit_defaults_content(fake_word):
 
 def test_mcp_table_autofit(fake_word):
     pytest.importorskip("mcp")
-    from office_mcp.word.wordcom.runtime._dispatch import _write_impl
+    from office_mcp.word.wordcom.runtime._dispatch import dispatch_write
     from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
-    r = _write_impl(InlineWorker(), "table", {"action": "autofit", "table": 1, "mode": "fixed"})
+    r = dispatch_write(InlineWorker(), "table", {"action": "autofit", "table": 1, "mode": "fixed"})
     assert r["ok"]
     assert _table_com(fake_word).autofit_behavior == int(WdAutoFitBehavior.FIXED)

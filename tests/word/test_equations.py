@@ -126,10 +126,10 @@ def test_insert_equation_in_op_registries():
         assert field in optional
 
 
-def test_mcp_build_write_op_insert_equation():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+def test_write_command_to_op_insert_equation():
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
-    op = _build_write_op(
+    op = write_command_to_op(
         "insert_equation",
         {"anchor_id": "heading:1", "latex": r"\frac12", "display": False, "before": True},
     )
@@ -142,13 +142,15 @@ def test_mcp_build_write_op_insert_equation():
     }
 
 
-def test_mcp_build_write_op_insert_equation_requires_one_dialect():
-    from office_mcp.word.wordcom.runtime._dispatch import _build_write_op
+def test_write_command_to_op_insert_equation_requires_one_dialect():
+    from office_mcp.word.wordcom.runtime._dispatch import write_command_to_op
 
     with pytest.raises(OpError, match="exactly one"):
-        _build_write_op("insert_equation", {"anchor_id": "heading:1"})
+        write_command_to_op("insert_equation", {"anchor_id": "heading:1"})
     with pytest.raises(OpError, match="exactly one"):
-        _build_write_op("insert_equation", {"anchor_id": "heading:1", "latex": "a", "mathml": "b"})
+        write_command_to_op(
+            "insert_equation", {"anchor_id": "heading:1", "latex": "a", "mathml": "b"}
+        )
 
 
 # ---------------------------------------------------------------------------

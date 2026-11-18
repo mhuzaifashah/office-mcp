@@ -14,7 +14,7 @@ from office_mcp.word import wordcom
 from office_mcp.word.wordcom.constants import WdInformation as _Info
 from office_mcp.word.wordcom.constants import WdStatistic as _Stat
 from office_mcp.word.wordcom.exceptions import OpError
-from office_mcp.word.wordcom.runtime._dispatch import _read_impl, _write_impl
+from office_mcp.word.wordcom.runtime._dispatch import dispatch_read, dispatch_write
 from office_mcp.word.wordcom.runtime._ops import run_batch
 from office_mcp.word.wordcom.runtime._worker import InlineWorker
 
@@ -158,27 +158,27 @@ def test_stats_preserves_saved_dirty_bit(fake_word):
 
 def test_mcp_read_location(fake_word):
     _seed_location(fake_word.ActiveDocument, 0, 10, start_page=2, end_page=2)
-    out = _read_impl(W, "location", {"anchor_id": "range:0-10"})
+    out = dispatch_read(W, "location", {"anchor_id": "range:0-10"})
     assert out["anchor_id"] == "range:0-10" and out["page"] == 2
 
 
 def test_mcp_read_stats(fake_word):
     _seed_stats(fake_word.ActiveDocument)
-    out = _read_impl(W, "stats", {})
+    out = dispatch_read(W, "stats", {})
     assert out["pages"] == 3 and out["revisions"] == 1
 
 
 def test_mcp_read_table_records(fake_word):
-    out = _read_impl(W, "table_records", {"table": 1})
+    out = dispatch_read(W, "table_records", {"table": 1})
     assert out == [{"A1": "A2", "B1": "B2"}]
 
 
 def test_mcp_table_append_record_and_update_row(fake_word):
-    r1 = _write_impl(
+    r1 = dispatch_write(
         W, "table", {"action": "append_record", "table": 1, "record": {"A1": "X", "B1": "Y"}}
     )
     assert r1["ok"] is True
-    r2 = _write_impl(
+    r2 = dispatch_write(
         W,
         "table",
         {"action": "update_row", "table": 1, "key": "A2", "values": {"B1": "Z"}},
@@ -321,20 +321,20 @@ def test_find_paragraphs_bad_args_raise(fake_word):
 
 
 def test_mcp_read_between(fake_word):
-    out = _read_impl(W, "between", {"start_anchor": "heading:1", "end_anchor": "heading:3"})
+    out = dispatch_read(W, "between", {"start_anchor": "heading:1", "end_anchor": "heading:3"})
     assert out["anchor_id"] == "range:13-29" and out["start"] == "heading:1"
 
 
 def test_mcp_read_nearest_heading(fake_word):
-    out = _read_impl(W, "nearest_heading", {"anchor_id": "para:2", "direction": "after"})
+    out = dispatch_read(W, "nearest_heading", {"anchor_id": "para:2", "direction": "after"})
     assert out["heading"]["anchor_id"] == "heading:3"
 
 
 def test_mcp_read_nearest_heading_default_direction(fake_word):
-    out = _read_impl(W, "nearest_heading", {"anchor_id": "para:2"})
+    out = dispatch_read(W, "nearest_heading", {"anchor_id": "para:2"})
     assert out["direction"] == "before" and out["heading"]["anchor_id"] == "heading:1"
 
 
 def test_mcp_find_paragraphs(fake_word):
-    out = _read_impl(W, "find_paragraphs", {"text": "Risks", "min_score": 0.99})
+    out = dispatch_read(W, "find_paragraphs", {"text": "Risks", "min_score": 0.99})
     assert [r["anchor_id"] for r in out] == ["para:3"]
