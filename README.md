@@ -24,12 +24,12 @@ server.
   Python and the server for you.
 - Optional: Microsoft Excel, used by Word to insert charts.
 
-The server must run as a Windows process. If your agent runs in WSL, start
-the Windows `uvx.exe` from its MCP config.
+The server is a Windows program. Agents that run in WSL start it through
+Windows; see [Agents running in WSL](#agents-running-in-wsl).
 
 ## Getting started
 
-Add the server to your MCP client. The standard config is:
+Most MCP clients take this standard config:
 
 ```json
 {
@@ -45,6 +45,46 @@ Add the server to your MCP client. The standard config is:
 Without `--save-dir` the agent can read and edit open documents, but it cannot
 write any file.
 
+The first start downloads the server and its dependencies, which can take
+15 to 30 seconds and trip a client's startup timeout. Run
+`uvx office-mcp --version` once in a terminal first, and later starts take
+about 2 seconds.
+
+Then open a document in Word and ask your agent, for example: *"Read the
+outline of my open document and tighten the introduction."*
+
+### Add it to your agent
+
+Some Word calls (exporting a long PDF, rendering many pages) take more than a
+minute. Where a client cuts tool calls off sooner, the entries below raise its
+limit to 300 seconds, the same time the server waits for a busy Word.
+
+<details>
+<summary>Antigravity</summary>
+
+In the Antigravity app open Customizations, then Installed, then MCP Servers,
+and choose Add MCP Server. In the IDE open the "..." menu in the agent panel,
+then MCP Servers, Manage MCP Servers, View raw config. Add the standard config
+to `mcp_config.json` (global: `~/.gemini/config/mcp_config.json`; a server's
+menu has Copy Config File Path), with a longer tool timeout:
+
+```json
+{
+  "mcpServers": {
+    "office": {
+      "command": "uvx",
+      "args": ["office-mcp", "--save-dir", "C:\\AI output"],
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+Antigravity saves large images from tools to a file and gives the agent the
+file, so `word_snapshot` pages reach the model that way.
+
+</details>
+
 <details>
 <summary>Claude Code</summary>
 
@@ -52,13 +92,69 @@ write any file.
 claude mcp add office --scope user -- uvx office-mcp --save-dir "C:\AI output"
 ```
 
+No timeout changes are needed. Calls that run longer than two minutes move to
+the background on their own.
+
 </details>
 
 <details>
 <summary>Claude Desktop</summary>
 
 Open Settings, then Developer, then Edit Config, and add the standard config
-above to `claude_desktop_config.json`. Restart Claude Desktop.
+to `claude_desktop_config.json`. Restart Claude Desktop.
+
+</details>
+
+<details>
+<summary>Cline</summary>
+
+From the Cline CLI:
+
+```sh
+cline mcp add office --yes -- uvx office-mcp --save-dir "C:\AI output"
+```
+
+Or in the extension open the MCP Servers view, choose Configure MCP Servers,
+and add the standard config with a `timeout`:
+
+```json
+{
+  "mcpServers": {
+    "office": {
+      "command": "uvx",
+      "args": ["office-mcp", "--save-dir", "C:\\AI output"],
+      "timeout": 300
+    }
+  }
+}
+```
+
+`timeout` is in seconds and covers startup and every tool call. Without it,
+Cline stops tool calls after 60 seconds and startup after 10.
+
+</details>
+
+<details>
+<summary>Codex (CLI, IDE extension, app)</summary>
+
+```sh
+codex mcp add office -- uvx office-mcp --save-dir "C:\AI output"
+```
+
+Then raise the timeouts in `~/.codex/config.toml`
+(`%USERPROFILE%\.codex\config.toml` on Windows). The CLI, the IDE extension
+and the ChatGPT desktop app share this file.
+
+```toml
+[mcp_servers.office]
+command = "uvx"
+args = ["office-mcp", "--save-dir", 'C:\AI output']
+startup_timeout_sec = 60
+tool_timeout_sec = 300
+```
+
+Codex passes only a few environment variables to servers, so use flags rather
+than `OFFICE_MCP_*` variables, or list them under `env`.
 
 </details>
 
@@ -67,6 +163,86 @@ above to `claude_desktop_config.json`. Restart Claude Desktop.
 
 Add the standard config to `%USERPROFILE%\.cursor\mcp.json`, or to
 `.cursor\mcp.json` in a project.
+
+</details>
+
+<details>
+<summary>Hermes Agent</summary>
+
+```sh
+hermes mcp add office --command uvx --args office-mcp --save-dir "C:\AI output"
+```
+
+`--args` takes everything after it, so keep it last. Or edit the config
+(`~/.hermes/config.yaml`; on native Windows it is under `%LOCALAPPDATA%\hermes`):
+
+```yaml
+mcp_servers:
+  office:
+    command: uvx
+    args: [office-mcp, --save-dir, 'C:\AI output']
+```
+
+The default tool timeout, 300 seconds, is enough. In WSL, see
+[Agents running in WSL](#agents-running-in-wsl).
+
+</details>
+
+<details>
+<summary>OpenClaw</summary>
+
+```sh
+openclaw mcp add office --command uvx --arg office-mcp --arg --save-dir --arg "C:\AI output"
+```
+
+Then set a longer request timeout (the default is 60 seconds) in
+`~/.openclaw/openclaw.json`:
+
+```json5
+{
+  mcp: {
+    servers: {
+      office: {
+        command: "uvx",
+        args: ["office-mcp", "--save-dir", "C:\\AI output"],
+        requestTimeoutMs: 300000,
+      },
+    },
+  },
+}
+```
+
+Office automation only reaches apps in your signed-in desktop session. If the
+OpenClaw Gateway runs as a background service, the server cannot see Word, so
+run the Gateway in your own session.
+
+</details>
+
+<details>
+<summary>OpenCode</summary>
+
+```sh
+opencode mcp add office -- uvx office-mcp --save-dir "C:\AI output"
+```
+
+Or add to `opencode.json` (global: `~/.config/opencode/opencode.json`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "office": {
+      "type": "local",
+      "command": ["uvx", "office-mcp", "--save-dir", "C:\\AI output"],
+      "enabled": true,
+      "timeout": 300000
+    }
+  }
+}
+```
+
+`timeout` is in milliseconds. Leave it out and tool calls may be stopped after
+30 seconds.
 
 </details>
 
@@ -80,24 +256,10 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "office": {
       "command": "uvx",
-      "args": ["office-mcp"]
+      "args": ["office-mcp", "--save-dir", "C:\\AI output"]
     }
   }
 }
-```
-
-</details>
-
-<details>
-<summary>Codex CLI</summary>
-
-Add to `%USERPROFILE%\.codex\config.toml`:
-
-```toml
-[mcp_servers.office]
-command = "uvx"
-args = ["office-mcp"]
-startup_timeout_ms = 20_000
 ```
 
 </details>
@@ -118,8 +280,44 @@ startup_timeout_ms = 20_000
 
 </details>
 
-Then open a document in Word and ask your agent, for example: *"Read the
-outline of my open document and tighten the introduction."*
+Other clients: use the standard config wherever the client adds a local
+(stdio) MCP server.
+
+### Agents running in WSL
+
+The server must run on Windows, but an agent inside WSL can start it there.
+Use the Windows `uvx.exe` as the command, or go through `cmd.exe`:
+
+```sh
+claude mcp add office --scope user -- uvx.exe office-mcp --save-dir "C:\AI output"
+hermes mcp add office --command cmd.exe --args /c uvx office-mcp --save-dir "C:\AI output"
+```
+
+- `uvx.exe` is found when WSL adds the Windows PATH, which it does by default.
+  Otherwise give its full path as WSL sees it (by default uv installs it in
+  `%USERPROFILE%\.local\bin`).
+- `cmd.exe` prints a "UNC paths are not supported" warning when the agent
+  starts from a Linux folder. The warning is harmless; starting the agent from a
+  folder on a Windows drive avoids it.
+- Linux environment variables do not reach the Windows process, so pass
+  settings as flags. Paths are Windows paths (`C:\...`).
+
+### Client support
+
+The server speaks MCP over stdio and works with every protocol version from
+2024-11-05 on. Everything an agent needs is in the tool descriptions and the
+guide, so a client that skips the server instructions or resources still
+works.
+
+| Client | Sees `word_snapshot` images | Server instructions | Timeout to set |
+| --- | --- | --- | --- |
+| Antigravity | yes, saved to a file first | yes | `timeoutSeconds: 300` |
+| Claude Code | yes | yes | none |
+| Cline | yes | not documented | `timeout: 300` |
+| Codex | yes, with image-capable models | yes | `tool_timeout_sec = 300` |
+| Hermes Agent | yes | not documented | none |
+| OpenClaw | yes | yes | `requestTimeoutMs: 300000` |
+| OpenCode | yes | yes | `timeout: 300000` |
 
 ## Tools
 
@@ -175,8 +373,13 @@ Directory lists in variables are separated by `;`.
 - **`word_busy`**: a dialog is open in Word (Save As, a warning). Close it and
   the agent can retry.
 - **`path_not_allowed`** when saving: start the server with `--save-dir`.
+- **The server fails to start the first time**: the first start downloads the
+  server and can outlast the client's startup timeout. Run
+  `uvx office-mcp --version` once, then restart the client.
+- **A long call fails with a timeout**: raise the client's tool timeout; see
+  [Add it to your agent](#add-it-to-your-agent).
 - **Nothing happens in WSL**: Office automation needs the Windows build of the
-  server; see Requirements.
+  server; see [Agents running in WSL](#agents-running-in-wsl).
 
 ## Development
 
