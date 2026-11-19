@@ -3606,14 +3606,9 @@ class ParagraphCollection:
         `para:N` anchor.
         """
         with _com.translate_com_errors():
-            doc_com = self._doc.com
-            if offset < 0 or offset >= int(doc_com.Content.End):
-                return None
-            idx = _para_index.index_at(doc_com, offset)
-            para = _para_index.paragraph(doc_com, idx)
-            if para is not None and int(para.Range.Start) <= offset < int(para.Range.End):
-                return Paragraph(self._doc, idx)
-        return None
+            locator = self._doc._locator or _para_index.Locator(self._doc.com)
+            idx = locator.index(offset)
+        return Paragraph(self._doc, idx) if idx is not None else None
 
     def list(self, *, start: int = 1, count: int | None = None) -> list[dict[str, Any]]:
         """Paragraphs as `[{index, anchor_id, level, style, is_heading, start, end, text}, ...]`.

@@ -60,6 +60,7 @@ def dispatch_read(worker: Worker, command: str, p: dict[str, Any]) -> Any:
             if command == "status":
                 return word.documents.list()
             doc = pick_doc(word, p.get("doc"))
+            doc.reuse_positions()  # a read never edits, so lookups can share work
             if command == "outline":
                 return doc.paragraphs.list() if p.get("all_paragraphs") else doc.outline()
             if command == "paragraphs":

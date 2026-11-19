@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..content._tables import _strip_cell_text
 from ..exceptions import OpError
+from ..model import _para_index
 from ..model._anchors import _read_font, _read_paragraph_format, range_text
 from ..review import _find_replace
 from ..runtime import _com
@@ -235,17 +236,44 @@ def build_checkpoint(
 
         doc_com = doc._doc
         paragraphs: list[dict[str, Any]] = []
-        for idx, para in enumerate(doc_com.Paragraphs, start=1):
+        # A whole-document checkpoint without formatting can take every text
+        # from one read and the heading levels from one lookup, instead of
+        # several COM calls per paragraph; it hashes the same values.
+        split = (
+            _para_index.texts(doc_com, stable=True)
+            if span is None and include != "text+format"
+            else None
+        )
+        levels: dict[int, int] = {}
+        shape_paras: set[int] = set()
+        if split is not None:
+            levels = {i: lvl for i, lvl, _ in _para_index.headings(doc_com)}
+            locator = _para_index.Locator(doc_com)
+            for shape in doc_com.InlineShapes:  # range_text renders these as [image]
+                shape_para = locator.index(int(shape.Range.Start))
+                if shape_para is not None:
+                    shape_paras.add(shape_para)
+        if span is None:
+            rows: Any = enumerate(doc_com.Paragraphs, start=1)
+        else:
+            # Only the paragraphs touching the scope, not the whole document.
+            first = _para_index.index_at(doc_com, span[0])
+            rows = enumerate(doc_com.Range(span[0], max(span[0], span[1])).Paragraphs, start=first)
+        for idx, para in rows:
             rng = para.Range
-            lo, hi = int(rng.Start), int(rng.End)
-            if not _overlaps(span, lo, hi):
-                continue
-            raw = _stable_paragraph_text(rng)
+            if split is not None:
+                raw = _stable_paragraph_text(rng) if idx in shape_paras else split[idx - 1]
+                level = levels.get(idx, 10)
+            else:
+                lo, hi = int(rng.Start), int(rng.End)
+                if not _overlaps(span, lo, hi):
+                    continue
+                raw = _stable_paragraph_text(rng)
+                try:
+                    level = int(para.OutlineLevel)
+                except Exception:
+                    level = 10
             norm = _find_replace._normalize(raw).text
-            try:
-                level = int(para.OutlineLevel)
-            except Exception:
-                level = 10
             try:
                 style = str(rng.ParagraphStyle.NameLocal)
             except Exception:

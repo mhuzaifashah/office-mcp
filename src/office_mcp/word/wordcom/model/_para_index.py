@@ -28,6 +28,7 @@ from typing import Any
 from ..constants import WdCollapseDirection
 
 __all__ = [
+    "Locator",
     "count",
     "headings",
     "index_at",
@@ -68,6 +69,35 @@ def index_at(doc_com: Any, pos: int) -> int:
     if end > 0 and pos >= end:
         pos = end - 1
     return int(doc_com.Range(0, pos + 1).Paragraphs.Count)
+
+
+class Locator:
+    """Maps positions to paragraph indices, continuing from the last answer.
+
+    `index_at` counts from the top of the document, which on a long document
+    costs 100 ms or more per call. Lists of fields, links or images ask in
+    document order, so counting only from the previous position keeps each
+    call small. Valid only while the document is unchanged (one read).
+    """
+
+    def __init__(self, doc_com: Any) -> None:
+        self._doc = doc_com
+        self._end: int | None = None
+        self._last: tuple[int, int] | None = None  # (position, index)
+
+    def index(self, pos: int) -> int | None:
+        """Index of the paragraph holding `pos`, or None outside the document."""
+        if self._end is None:
+            self._end = int(self._doc.Content.End)
+        if pos < 0 or pos >= self._end:
+            return None
+        if self._last is not None and self._last[0] <= pos:
+            last_pos, last_index = self._last
+            index = last_index + int(self._doc.Range(last_pos, pos + 1).Paragraphs.Count) - 1
+        else:
+            index = index_at(self._doc, pos)
+        self._last = (pos, index)
+        return index
 
 
 def paragraphs_between(doc_com: Any, first: int, last: int) -> Iterator[tuple[int, Any]]:
@@ -220,21 +250,40 @@ def _headings_by_find(
     return out
 
 
-def texts(doc_com: Any) -> list[str] | None:
-    """Every paragraph's raw text from one read of the document, or None.
+def _read_text(rng: Any, stable: bool) -> str:
+    if stable:
+        # Fixed retrieval mode: the text no longer depends on whether the user
+        # shows field codes or hidden text.
+        try:
+            mode = rng.TextRetrievalMode
+            mode.IncludeFieldCodes = False
+            mode.IncludeHiddenText = False
+        except Exception:  # noqa: BLE001
+            pass
+    return str(rng.Text or "")
 
-    `Content.Text` is split at paragraph ends. The split is trusted only when
-    its length matches `Paragraphs.Count` and a sample of paragraphs read
-    directly agrees; otherwise None, so the caller can walk instead.
+
+def texts(doc_com: Any, *, stable: bool = False) -> list[str] | None:
+    """Every paragraph's text from one read of the document, or None.
+
+    Each entry is the paragraph's `Range.Text` without its closing CR or cell
+    mark; a section break paragraph keeps its form feed. `stable` reads with
+    field codes and hidden text excluded. The split is trusted only when its
+    length matches `Paragraphs.Count` and a sample of paragraphs read directly
+    agrees; otherwise None, so the caller can walk instead.
     """
     try:
-        full = str(doc_com.Content.Text or "")
+        full = _read_text(doc_com.Content, stable)
         total = count(doc_com)
     except Exception:  # noqa: BLE001 - fall back to a walk
         return None
-    parts = _PARAGRAPH_END.split(full)
-    if parts and parts[-1] == "":
-        parts.pop()
+    parts: list[str] = []
+    pos = 0
+    for mark in _PARAGRAPH_END.finditer(full):
+        parts.append(full[pos : mark.start()] + ("\x0c" if mark.group() == "\x0c" else ""))
+        pos = mark.end()
+    if pos < len(full):
+        parts.append(full[pos:])
     if len(parts) != total or total == 0:
         return None
     step = max(1, total // _TEXT_SAMPLES)
@@ -242,7 +291,6 @@ def texts(doc_com: Any) -> list[str] | None:
         para = paragraph(doc_com, index)
         if para is None:
             return None
-        direct = str(para.Range.Text or "").rstrip("\r\x07").replace("\x0c", "")
-        if direct != parts[index - 1].replace("\x0c", ""):
+        if _read_text(para.Range, stable).rstrip("\r\x07") != parts[index - 1]:
             return None
     return parts

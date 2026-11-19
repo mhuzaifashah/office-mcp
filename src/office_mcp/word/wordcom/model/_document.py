@@ -252,6 +252,18 @@ class Document:
     def __init__(self, word: Word, doc: Any) -> None:
         self._word = word
         self._doc = doc
+        # Set for the length of one read: position lookups may reuse earlier
+        # answers because nothing edits the document meanwhile.
+        self._locator: _para_index.Locator | None = None
+
+    def reuse_positions(self) -> None:
+        """Let paragraph lookups reuse earlier answers. Only for reads.
+
+        A read that maps many positions to paragraphs (fields, links, images)
+        then counts from the previous position instead of the document's top.
+        Never call this on a Document that will be edited afterwards.
+        """
+        self._locator = _para_index.Locator(self._doc)
 
     @property
     def com(self) -> Any:
