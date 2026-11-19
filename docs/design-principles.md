@@ -18,6 +18,11 @@ Tool names start with the app (`word_`, `excel_`, `ppt_`). Parameter names are
 unambiguous (`anchor_id`, `table`, `start_anchor`), and closed sets are enums
 in the schema, so a typo fails validation instead of doing something else.
 
+Schemas stay plain so every client reads them the same way: optional
+parameters are typed `X | SkipJsonSchema[None]` (no `anyOf` with null), and
+no `$ref`. Each tool's schema stays under 4,500 bytes, because Codex removes
+parameter descriptions from schemas over 5,000. A test checks both.
+
 ## Small outputs
 
 - Results are compact JSON; prose (Markdown, the guide) is plain text.

@@ -54,6 +54,23 @@ def test_read_commands_match_the_dispatcher():
     assert set(READ_COMMANDS) == set(re.findall(r'command == "([a-z_]+)"', src))
 
 
+def test_schemas_stay_portable_across_clients():
+    async def go():
+        async with Client(build_server(ServerConfig(), toolsets=[_toolset()])) as client:
+            return (await client.list_tools()).tools
+
+    for tool in anyio.run(go):
+        schema = json.dumps(tool.input_schema, separators=(",", ":"))
+        assert "anyOf" not in schema and "$ref" not in schema, tool.name
+        # Codex drops parameter descriptions from schemas over 5,000 bytes.
+        assert len(schema) < 4500, (tool.name, len(schema))
+
+
+def test_optional_params_accept_null(fake_word):
+    result = _call("word_read", {"command": "status", "doc": None, "anchor_id": None})
+    assert not result.is_error
+
+
 def test_status_lists_open_documents(fake_word):
     result = _call("word_read", {"command": "status"})
     assert not result.is_error

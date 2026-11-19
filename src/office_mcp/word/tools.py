@@ -17,6 +17,7 @@ from typing import Annotated, Any, Literal
 
 from mcp_types import CallToolResult, ContentBlock
 from pydantic import Field
+from pydantic.json_schema import SkipJsonSchema
 
 from ..server import response
 from ..server.config import ServerConfig
@@ -138,8 +139,12 @@ _OP_ERROR_HINT = (
     "required fields."
 )
 
+# Optional parameters are typed `X | SkipJsonSchema[None]`: a client may still
+# send null, but the schema shows a plain `X`. `anyOf [X, null]` trips some
+# clients (Gemini models) and adds bytes; Codex strips descriptions from any
+# tool schema over 5,000 bytes.
 DocName = Annotated[
-    str | None,
+    str | SkipJsonSchema[None],
     Field(description='Document name from word_read(command="status"); omit for the active one.'),
 ]
 
@@ -289,7 +294,7 @@ class WordToolset:
             command: Annotated[ReadCommand, Field(description="What to read.")],
             doc: DocName = None,
             anchor_id: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(
                     description="Anchor id such as heading:12, para:3, range:40-55, "
                     "bookmark:NAME, cc:NAME, table:1:2:3 or image:1. For read_text, "
@@ -298,80 +303,90 @@ class WordToolset:
                 ),
             ] = None,
             text: Annotated[
-                str | None, Field(description="Text to look for (find, find_paragraphs).")
+                str | SkipJsonSchema[None],
+                Field(description="Text to look for (find, find_paragraphs)."),
             ] = None,
             name: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(description="Bookmark or content-control name (read_bookmark, read_cc)."),
             ] = None,
             heading: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(description="Heading text, instead of anchor_id (read_section)."),
             ] = None,
             start: Annotated[
-                int | None, Field(ge=1, description="First paragraph, 1-based (paragraphs).")
+                int | SkipJsonSchema[None],
+                Field(ge=1, description="First paragraph, 1-based (paragraphs)."),
             ] = None,
             count: Annotated[
-                int | None, Field(ge=1, description="How many paragraphs (paragraphs).")
+                int | SkipJsonSchema[None],
+                Field(ge=1, description="How many paragraphs (paragraphs)."),
             ] = None,
             all_paragraphs: Annotated[
-                bool | None,
+                bool | SkipJsonSchema[None],
                 Field(description="List every paragraph, not just headings (outline)."),
             ] = None,
             in_anchor: Annotated[
-                str | None, Field(description="Only search inside this anchor (find).")
+                str | SkipJsonSchema[None],
+                Field(description="Only search inside this anchor (find)."),
             ] = None,
             limit: Annotated[
-                int | None, Field(ge=1, description="Most candidates, default 5 (find_paragraphs).")
+                int | SkipJsonSchema[None],
+                Field(ge=1, description="Most candidates, default 5 (find_paragraphs)."),
             ] = None,
             min_score: Annotated[
-                float | None,
+                float | SkipJsonSchema[None],
                 Field(
                     ge=0, le=1, description="Lowest similarity, 0-1, default 0.6 (find_paragraphs)."
                 ),
             ] = None,
             direction: Annotated[
-                Literal["before", "after"] | None,
+                Literal["before", "after"] | SkipJsonSchema[None],
                 Field(description="Search direction (nearest_heading)."),
             ] = None,
             view: Annotated[
-                Literal["raw", "final", "original", "segments"] | None,
+                Literal["raw", "final", "original", "segments"] | SkipJsonSchema[None],
                 Field(
                     description="raw text, as if tracked changes were accepted (final) or "
                     "rejected (original), or per-revision segments (read_text)."
                 ),
             ] = None,
             start_anchor: Annotated[
-                str | None, Field(description="Anchor the span starts at (between).")
+                str | SkipJsonSchema[None],
+                Field(description="Anchor the span starts at (between)."),
             ] = None,
             end_anchor: Annotated[
-                str | None, Field(description="Anchor the span ends at (between).")
+                str | SkipJsonSchema[None], Field(description="Anchor the span ends at (between).")
             ] = None,
             inclusive: Annotated[
-                bool | None, Field(description="Include both end anchors (between).")
+                bool | SkipJsonSchema[None],
+                Field(description="Include both end anchors (between)."),
             ] = None,
             within: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(
                     description="Limit to one anchor, usually a heading's section "
                     "(to_markdown, to_html, lint, checkpoint)."
                 ),
             ] = None,
             budget: Annotated[
-                int | None, Field(ge=200, description="Token budget, default 6000 (digest).")
+                int | SkipJsonSchema[None],
+                Field(ge=200, description="Token budget, default 6000 (digest)."),
             ] = None,
             depth: Annotated[
-                int | None, Field(ge=1, le=9, description="Deepest heading level (digest).")
+                int | SkipJsonSchema[None],
+                Field(ge=1, le=9, description="Deepest heading level (digest)."),
             ] = None,
             table: Annotated[
-                int | None,
+                int | SkipJsonSchema[None],
                 Field(ge=1, description="Table number, 1-based (table_read, table_records)."),
             ] = None,
             rules: Annotated[
-                list[str] | None, Field(description="Lint rules to run; default all (lint).")
+                list[str] | SkipJsonSchema[None],
+                Field(description="Lint rules to run; default all (lint)."),
             ] = None,
             include: Annotated[
-                Literal["text", "text+style", "text+format"] | None,
+                Literal["text", "text+style", "text+format"] | SkipJsonSchema[None],
                 Field(description="What the fingerprint covers (checkpoint)."),
             ] = None,
             checkpoint: Annotated[
@@ -440,7 +455,7 @@ class WordToolset:
                 ),
             ],
             label: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(description="Name of the undo step the user sees in Word."),
             ] = None,
             tracked: Annotated[
@@ -462,11 +477,11 @@ class WordToolset:
 
         def word_snapshot(
             pages: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(description='One page ("4") or a range ("2-5"). Omit for every page.'),
             ] = None,
             anchor: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(
                     description="Render the page(s) this anchor is on instead; a heading "
                     "covers its whole section."
@@ -474,7 +489,7 @@ class WordToolset:
             ] = None,
             dpi: Annotated[int, Field(ge=72, le=300, description="Render resolution.")] = 150,
             max_dim: Annotated[
-                int | None,
+                int | SkipJsonSchema[None],
                 Field(
                     ge=100,
                     le=4000,
@@ -511,23 +526,27 @@ class WordToolset:
         def word_write(
             command: Annotated[WriteCommand, Field(description="What to do.")],
             path: Annotated[
-                str | None,
+                str | SkipJsonSchema[None],
                 Field(
                     description="Local file path: the document to open (open), or the "
                     "target file (save_as, export_pdf)."
                 ),
             ] = None,
             overwrite: Annotated[
-                bool | None, Field(description="Replace an existing file (save_as).")
+                bool | SkipJsonSchema[None],
+                Field(description="Replace an existing file (save_as)."),
             ] = None,
             from_page: Annotated[
-                int | None, Field(ge=1, description="First page to export (export_pdf).")
+                int | SkipJsonSchema[None],
+                Field(ge=1, description="First page to export (export_pdf)."),
             ] = None,
             to_page: Annotated[
-                int | None, Field(ge=1, description="Last page to export (export_pdf).")
+                int | SkipJsonSchema[None],
+                Field(ge=1, description="Last page to export (export_pdf)."),
             ] = None,
             on: Annotated[
-                bool | None, Field(description="Turn Track Changes on or off (track).")
+                bool | SkipJsonSchema[None],
+                Field(description="Turn Track Changes on or off (track)."),
             ] = None,
             doc: DocName = None,
         ) -> CallToolResult:
