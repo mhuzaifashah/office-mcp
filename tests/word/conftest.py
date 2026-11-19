@@ -161,6 +161,55 @@ class _FakeParagraphs:
     def __iter__(self) -> Iterable[Any]:
         return iter(self._items)
 
+    @property
+    def Count(self) -> int:
+        return len(self._items)
+
+    def __call__(self, index: int) -> Any:  # 1-based, like Word
+        if not 1 <= index <= len(self._items):
+            raise IndexError(f"no paragraph {index}")
+        return self._items[index - 1]
+
+    Item = __call__
+
+
+class _FakeRangeParagraphs:
+    """`Range(a, b).Paragraphs`: the document's paragraphs that overlap the span.
+
+    Read lazily from the document so it tracks tests that swap paragraphs in.
+    A collapsed range yields the paragraph holding its position, as in Word.
+    """
+
+    def __init__(self, doc: Any, start: int, end: int) -> None:
+        self._doc = doc
+        self._start = start
+        self._end = end
+        # Edits write text the fake never turns into paragraphs; indexing such a
+        # span hands back one stable stand-in, as a bare MagicMock used to.
+        self._stand_in = MagicMock(name=f"RangeParagraph[{start},{end}]")
+
+    def _items(self) -> list[Any]:
+        out = []
+        for para in self._doc.Paragraphs:
+            s, e = int(para.Range.Start), int(para.Range.End)
+            if self._start == self._end:
+                if s <= self._start < e:
+                    out.append(para)
+            elif s < self._end and e > self._start:
+                out.append(para)
+        return out
+
+    def __iter__(self) -> Iterable[Any]:
+        return iter(self._items())
+
+    @property
+    def Count(self) -> int:
+        return len(self._items())
+
+    def __call__(self, index: int) -> Any:
+        items = self._items()
+        return items[index - 1] if 1 <= index <= len(items) else self._stand_in
+
 
 class _FakeListFormat:
     """Mimics Range.ListFormat: apply/remove templates, in/out-dent, read state.
@@ -2332,6 +2381,7 @@ def _make_document(
             # insert_image) lands the picture in this document's body Shapes.
             rng.InlineShapes._doc_shapes = doc.Shapes
             rng.InlineShapes._anchor_start = int(start)
+            rng.Paragraphs = _FakeRangeParagraphs(doc, int(start), int(end))
             _range_cache[key] = rng
         return rng
 

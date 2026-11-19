@@ -184,7 +184,16 @@ class StyleCollection:
         if not isinstance(name, str):
             return False
         with _com.translate_com_errors():
-            for s in self._doc.com.Styles:
+            styles = self._doc.com.Styles
+            # A direct lookup is one call; reading every style's name is one call
+            # per style (300+ in a typical document). A miss raises a generic COM
+            # error, so a failed lookup is settled by the walk.
+            try:
+                if str(styles(name).NameLocal) == name:
+                    return True
+            except Exception:  # noqa: BLE001
+                pass
+            for s in styles:
                 if str(s.NameLocal) == name:
                     return True
         return False

@@ -43,6 +43,7 @@ from ..exceptions import AnchorNotFoundError, EquationError, ExcelNotAvailableEr
 from ..model import _lists
 from ..review import _revisions
 from ..runtime import _com
+from . import _para_index
 from ._coerce import bgr_to_hex, to_bgr, to_points
 
 if TYPE_CHECKING:
@@ -904,28 +905,21 @@ def _stale_anchor_hint(doc_com: Any, kind: str, index: int) -> str | None:
     the hint must never mask the original miss).
     """
     try:
-        paras = list(doc_com.Paragraphs)
+        count = _para_index.count(doc_com)
+        heads = _para_index.headings(doc_com)
     except Exception:
         return None
-    count = len(paras)
     pin_tip = "Pin a durable handle with `pin` to survive renumbering."
 
-    def _level(p: Any) -> int:
-        try:
-            return int(p.OutlineLevel)
-        except Exception:
-            return 10
-
     def _nearest_heading() -> tuple[int, str] | None:
-        best: tuple[int, int, str] | None = None  # (distance, idx, text)
-        for i, p in enumerate(paras, start=1):
+        best: tuple[int, int, Any] | None = None  # (distance, idx, paragraph)
+        for i, _level, p in heads:
             if i == index:
                 continue
-            if _level(p) < 10:
-                dist = abs(i - index)
-                if best is None or dist < best[0]:
-                    best = (dist, i, paragraph_text(p))
-        return (best[1], best[2]) if best is not None else None
+            dist = abs(i - index)
+            if best is None or dist < best[0]:
+                best = (dist, i, p)
+        return (best[1], paragraph_text(best[2])) if best is not None else None
 
     nh = _nearest_heading()
     if index < 1 or index > count:
@@ -972,17 +966,8 @@ def _resolve_cross_ref_target(doc: Document, target: str) -> tuple[int, int | st
             n = int(value)
         except ValueError as e:
             raise AnchorNotFoundError("heading", target) from e
-        ordinal = 0
-        for idx, para in enumerate(doc.com.Paragraphs, start=1):
-            try:
-                level = int(para.OutlineLevel)
-            except Exception:
-                level = 10
-            if level < 10:
-                ordinal += 1
+        for ordinal, (idx, _level, _para) in enumerate(_para_index.headings(doc.com), start=1):
             if idx == n:
-                if level >= 10:
-                    raise AnchorNotFoundError("heading", target)
                 return int(WdReferenceType.HEADING), ordinal
         raise AnchorNotFoundError("heading", target)
     if kind in ("footnote", "endnote"):
@@ -3538,11 +3523,11 @@ class Paragraph(Anchor):
         return self._index
 
     def _paragraph(self) -> Any:
-        for idx, para in enumerate(self._doc.com.Paragraphs, start=1):
-            if idx == self._index:
-                # Keep .name informative for repr / error messages.
-                self.name = paragraph_text(para) or self.name
-                return para
+        para = _para_index.paragraph(self._doc.com, self._index)
+        if para is not None:
+            # Keep .name informative for repr / error messages.
+            self.name = paragraph_text(para) or self.name
+            return para
         raise AnchorNotFoundError(
             "paragraph",
             f"para:{self._index}",
@@ -3592,7 +3577,7 @@ class ParagraphCollection:
 
     def _count(self) -> int:
         with _com.translate_com_errors():
-            return sum(1 for _ in self._doc.com.Paragraphs)
+            return _para_index.count(self._doc.com)
 
     def __len__(self) -> int:
         return self._count()
@@ -3610,7 +3595,7 @@ class ParagraphCollection:
 
     def __iter__(self) -> Iterator[Paragraph]:
         with _com.translate_com_errors():
-            count = sum(1 for _ in self._doc.com.Paragraphs)
+            count = _para_index.count(self._doc.com)
         for idx in range(1, count + 1):
             yield Paragraph(self._doc, idx)
 
@@ -3621,14 +3606,20 @@ class ParagraphCollection:
         `para:N` anchor.
         """
         with _com.translate_com_errors():
-            for idx, para in enumerate(self._doc.com.Paragraphs, start=1):
-                rng = para.Range
-                if int(rng.Start) <= offset < int(rng.End):
-                    return Paragraph(self._doc, idx)
+            doc_com = self._doc.com
+            if offset < 0 or offset >= int(doc_com.Content.End):
+                return None
+            idx = _para_index.index_at(doc_com, offset)
+            para = _para_index.paragraph(doc_com, idx)
+            if para is not None and int(para.Range.Start) <= offset < int(para.Range.End):
+                return Paragraph(self._doc, idx)
         return None
 
-    def list(self) -> list[dict[str, Any]]:
-        """Every paragraph as `[{index, anchor_id, level, style, is_heading, start, end, text}, ...]`.
+    def list(self, *, start: int = 1, count: int | None = None) -> list[dict[str, Any]]:
+        """Paragraphs as `[{index, anchor_id, level, style, is_heading, start, end, text}, ...]`.
+
+        Every paragraph by default; `start` (1-based) and `count` select a slice,
+        and only that slice is read from Word.
 
         `style` is the paragraph's applied Word style name (e.g. ``"Normal"``,
         ``"List Number"``, ``"Heading 2"``) — the handle to feed back into
@@ -3639,7 +3630,13 @@ class ParagraphCollection:
         """
         out: list[dict[str, Any]] = []
         with _com.translate_com_errors():
-            for idx, para in enumerate(self._doc.com.Paragraphs, start=1):
+            doc_com = self._doc.com
+            if start <= 1 and count is None:
+                rows: Iterator[tuple[int, Any]] = enumerate(doc_com.Paragraphs, start=1)
+            else:
+                last = start + count - 1 if count is not None else _para_index.count(doc_com)
+                rows = _para_index.paragraphs_between(doc_com, start, last)
+            for idx, para in rows:
                 try:
                     level = int(para.OutlineLevel)
                 except Exception:
@@ -5119,13 +5116,7 @@ def paragraph_text(para: Any) -> str:
 
 def _find_heading_paragraph(doc_com: Any, name: str) -> tuple[Any, int] | None:
     """Locate a heading paragraph by visible text. Returns (Paragraph, 1-based index)."""
-    for idx, para in enumerate(doc_com.Paragraphs, start=1):
-        try:
-            level = int(para.OutlineLevel)
-        except Exception:
-            continue
-        if level >= 10:  # WdOutlineLevel: 1-9 are headings; 10 is body text
-            continue
+    for idx, _level, para in _para_index.headings(doc_com):
         if paragraph_text(para) == name:
             return para, idx
     return None
@@ -5136,37 +5127,16 @@ def _section_range(doc_com: Any, target_para: Any, target_level: int) -> Any:
     OutlineLevel is a heading and `<= target_level` — or to the end of the
     document's last paragraph if no such boundary exists.
     """
-    paragraphs = list(doc_com.Paragraphs)
-    target_start = int(target_para.Range.Start)
-
-    idx: int | None = None
-    for i, p in enumerate(paragraphs):
-        try:
-            if int(p.Range.Start) == target_start:
-                idx = i
-                break
-        except Exception:
-            continue
-    if idx is None:
-        end = int(target_para.Range.End)
-        return doc_com.Range(end, end)
-
     section_start = int(target_para.Range.End)
-    section_end: int | None = None
-    for p in paragraphs[idx + 1 :]:
-        try:
-            lvl = int(p.OutlineLevel)
-        except Exception:
-            continue
-        if lvl < 10 and lvl <= target_level:
-            section_end = int(p.Range.Start)
-            break
-    if section_end is None:
-        try:
-            section_end = int(paragraphs[-1].Range.End)
-        except Exception:
-            section_end = section_start
-    return doc_com.Range(section_start, section_end)
+    following = _para_index.headings(
+        doc_com, start=section_start, max_level=min(target_level, 9), first=True
+    )
+    if following:
+        section_end = int(following[0][2].Range.Start)
+    else:
+        last = _para_index.paragraph(doc_com, _para_index.count(doc_com))
+        section_end = int(last.Range.End) if last is not None else section_start
+    return doc_com.Range(section_start, max(section_start, section_end))
 
 
 class Heading(Anchor):
@@ -5304,15 +5274,13 @@ class HeadingCollection:
         if isinstance(key, int):
             # 1-based paragraph index must reference an actual heading paragraph.
             with _com.translate_com_errors():
-                for idx, para in enumerate(self._doc.com.Paragraphs, start=1):
-                    if idx != key:
-                        continue
-                    try:
-                        lvl = int(para.OutlineLevel)
-                    except Exception:
-                        return False
-                    return lvl < 10
-            return False
+                para = _para_index.paragraph(self._doc.com, key)
+                if para is None:
+                    return False
+                try:
+                    return int(para.OutlineLevel) < 10
+                except Exception:
+                    return False
         if not isinstance(key, str):
             return False
         with _com.translate_com_errors():
@@ -5320,23 +5288,11 @@ class HeadingCollection:
 
     def list(self) -> list[dict[str, Any]]:
         """Same shape as `Document.outline()` — `[{level, text, anchor_id}, ...]`."""
-        out: list[dict[str, Any]] = []
         with _com.translate_com_errors():
-            for idx, para in enumerate(self._doc.com.Paragraphs, start=1):
-                try:
-                    level = int(para.OutlineLevel)
-                except Exception:
-                    continue
-                if level >= 10:
-                    continue
-                out.append(
-                    {
-                        "level": level,
-                        "text": paragraph_text(para),
-                        "anchor_id": f"heading:{idx}",
-                    }
-                )
-        return out
+            return [
+                {"level": level, "text": paragraph_text(para), "anchor_id": f"heading:{idx}"}
+                for idx, level, para in _para_index.headings(self._doc.com)
+            ]
 
     def __iter__(self) -> Iterator[Heading]:
         for entry in self.list():
@@ -5363,17 +5319,15 @@ class _IndexedHeading(Heading):
         return f"heading:{self._paragraph_index}"
 
     def _paragraph(self) -> Any:
-        for idx, para in enumerate(self._doc.com.Paragraphs, start=1):
-            if idx != self._paragraph_index:
-                continue
+        para = _para_index.paragraph(self._doc.com, self._paragraph_index)
+        if para is not None:
             try:
                 level = int(para.OutlineLevel)
             except Exception:
-                break
-            if level >= 10:
-                break
-            self.name = paragraph_text(para) or self.name
-            return para
+                level = 10
+            if level < 10:
+                self.name = paragraph_text(para) or self.name
+                return para
         raise AnchorNotFoundError(
             "heading",
             f"heading:{self._paragraph_index}",

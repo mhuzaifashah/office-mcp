@@ -42,6 +42,7 @@ from ..review._checkpoints import Checkpoint
 from ..review._comments import CommentCollection
 from ..review._revisions import RevisionCollection
 from ..runtime import _com
+from . import _para_index
 from ._anchors import (
     _WL_PREFIX,
     Bookmark,
@@ -68,7 +69,6 @@ from ._anchors import (
     _pin_name_for,
     _utf16_len,
     _validate_pin_slug,
-    _within_table,
     paragraph_text,
 )
 from ._coerce import to_bgr
@@ -176,6 +176,74 @@ def _split_around_fields(
     if end > cursor:
         pieces.append((cursor, end))
     return pieces
+
+
+def _table_spans(rng: Any, start: int, end: int) -> list[tuple[int, int]]:
+    """`(start, end)` of each table in `rng`, clipped to `[start, end)`, in order."""
+    spans = []
+    for table in rng.Tables:
+        t_range = table.Range
+        t_start, t_end = max(int(t_range.Start), start), min(int(t_range.End), end)
+        if t_end > t_start:
+            spans.append((t_start, t_end))
+    return sorted(spans)
+
+
+def _cell_segments(base: int, text: str) -> list[tuple[int, str]]:
+    """Split a table's text into one `(position, text)` segment per cell.
+
+    A table's `.Text` is each cell's text followed by its end mark `\r\x07`,
+    plus one more `\r\x07` at the end of each row. The mark is two characters
+    of text but a single document position; every other character takes its
+    UTF-16 length. Empty cells and row-end marks give no segment. Only valid for
+    a table without fields, whose codes take positions but no text.
+    """
+    out: list[tuple[int, str]] = []
+    pos = cell_start = base
+    text_start = i = 0
+    while i < len(text):
+        if text.startswith("\r\x07", i):
+            cell = text[text_start:i].rstrip("\r\n")
+            if cell:
+                out.append((cell_start, cell))
+            pos += 1
+            i += 2
+            cell_start, text_start = pos, i
+            continue
+        pos += 2 if ord(text[i]) > 0xFFFF else 1
+        i += 1
+    tail = text[text_start:].rstrip("\r\n")
+    if tail:
+        out.append((cell_start, tail))
+    return out
+
+
+def _cell_spans_by_paragraph(doc_com: Any, start: int, end: int) -> list[tuple[int, int, bool]]:
+    """`(start, end, is_cell)` per table cell in `[start, end)`, read paragraph by paragraph.
+
+    The slow path for a table that holds fields: each paragraph's cell is
+    looked up, and consecutive paragraphs of one cell form one span.
+    """
+    spans: list[tuple[int, int, bool]] = []
+    key: object | None = None
+    span_start = span_end = 0
+    for para in doc_com.Range(start, end).Paragraphs:
+        pr = para.Range
+        ps, pe = int(pr.Start), int(pr.End)
+        if ps >= end:
+            break
+        try:
+            cell_key: object = int(pr.Cells(1).Range.Start)
+        except Exception:  # noqa: BLE001 - give this paragraph its own span
+            cell_key = ps
+        if cell_key != key:
+            if key is not None and span_end > span_start:
+                spans.append((span_start, span_end, True))
+            key, span_start = cell_key, max(ps, start)
+        span_end = min(pe, end)
+    if key is not None and span_end > span_start:
+        spans.append((span_start, span_end, True))
+    return spans
 
 
 class Document:
@@ -346,12 +414,8 @@ class Document:
         existing = self._existing_pin_starts()
         out: dict[str, str] = {}
         with _com.translate_com_errors():
-            for idx, para in enumerate(self._doc.Paragraphs, start=1):
-                try:
-                    level = int(para.OutlineLevel)
-                except Exception:
-                    continue
-                if level >= 10 or not (lo <= level <= hi):
+            for idx, level, para in _para_index.headings(self._doc, max_level=hi):
+                if level < lo:
                     continue
                 rng = para.Range
                 start = int(rng.Start)
@@ -1194,40 +1258,27 @@ class Document:
             if not has_table and not fields:
                 return [(base, str(rng.Text or ""))]
 
-            # (start, end, is_cell) spans before field splitting.
+            # (start, end, is_cell) spans still to be cut around fields, and the
+            # segments of tables read in one piece.
             spans: list[tuple[int, int, bool]] = []
-            if not has_table:
-                spans.append((base, int(rng.End), False))
-            else:
-                seg_key: object | None = None
-                seg_start: int | None = None
-                seg_end: int | None = None
-
-                def flush() -> None:
-                    nonlocal seg_key, seg_start, seg_end
-                    if seg_start is not None and seg_end is not None and seg_end > seg_start:
-                        spans.append((seg_start, seg_end, seg_key != "body"))
-                    seg_key = seg_start = seg_end = None
-
-                for para in rng.Paragraphs:
-                    pr = para.Range
-                    ps, pe = int(pr.Start), int(pr.End)
-                    if _within_table(doc_com, ps, pe):
-                        # Key by the containing cell so two adjacent cells never
-                        # share a segment (a range spanning them breaks the 1:1 map).
-                        try:
-                            key: object = int(pr.Cells(1).Range.Start)
-                        except Exception:
-                            key = ps  # defensive: give this paragraph its own segment
-                    else:
-                        key = "body"
-                    if key != seg_key:
-                        flush()
-                        seg_key, seg_start = key, ps
-                    seg_end = pe
-                flush()
-
             segments: list[tuple[int, str]] = []
+            end = int(rng.End)
+            if not has_table:
+                spans.append((base, end, False))
+            else:
+                cursor = base
+                for t_start, t_end in _table_spans(rng, base, end):
+                    if t_start > cursor:
+                        spans.append((cursor, t_start, False))
+                    if any(f[0] < t_end and f[1] > t_start for f in fields):
+                        spans.extend(_cell_spans_by_paragraph(doc_com, t_start, t_end))
+                    else:
+                        table_text = str(doc_com.Range(t_start, t_end).Text or "")
+                        segments.extend(_cell_segments(t_start, table_text))
+                    cursor = max(cursor, t_end)
+                if end > cursor:
+                    spans.append((cursor, end, False))
+
             for span_start, span_end, is_cell in spans:
                 pieces = _split_around_fields(span_start, span_end, fields)
                 for i, (a, b) in enumerate(pieces):
@@ -1241,6 +1292,7 @@ class Document:
                         text = text.rstrip("\r\n\x07")
                     if text:
                         segments.append((a, text))
+        segments.sort(key=lambda seg: seg[0])
         return segments
 
     def find(
@@ -1499,22 +1551,11 @@ class Document:
         (the `outline` read op) stay pure — pin in bulk
         via `pin_outline` / the `pin_outline` exec op instead.
         """
-        out: list[dict[str, Any]] = []
         with _com.translate_com_errors():
-            for idx, para in enumerate(self._doc.Paragraphs, start=1):
-                try:
-                    level = int(para.OutlineLevel)
-                except Exception:
-                    continue
-                if level >= 10:
-                    continue
-                out.append(
-                    {
-                        "level": level,
-                        "text": paragraph_text(para),
-                        "anchor_id": f"heading:{idx}",
-                    }
-                )
+            out: list[dict[str, Any]] = [
+                {"level": level, "text": paragraph_text(para), "anchor_id": f"heading:{idx}"}
+                for idx, level, para in _para_index.headings(self._doc)
+            ]
         if pin:
             pinmap = self.pin_outline()
             for row in out:
@@ -1591,25 +1632,16 @@ class Document:
                 offset = int(where)
             else:
                 offset = int(where.com.Start)
-            best: dict[str, Any] | None = None
-            for idx, para in enumerate(self._doc.Paragraphs, start=1):
-                try:
-                    level = int(para.OutlineLevel)
-                except Exception:
-                    continue
-                if level >= 10:  # body text, not a heading
-                    continue
-                h_start = int(para.Range.Start)
-                row = {"level": level, "text": paragraph_text(para), "anchor_id": f"heading:{idx}"}
-                if direction == "before":
-                    if h_start <= offset:
-                        best = row  # paragraphs are in order; keep the last one at/above
-                    else:
-                        break
-                elif h_start > offset:  # "after": first heading strictly past the offset
-                    best = row
-                    break
-        return best
+            if direction == "before":
+                # The last heading starting at or above the offset.
+                found = _para_index.headings(self._doc, end=offset + 1)[-1:]
+            else:
+                # The first heading starting strictly past the offset.
+                found = _para_index.headings(self._doc, start=offset + 1, first=True)
+            if not found:
+                return None
+            idx, level, para = found[0]
+            return {"level": level, "text": paragraph_text(para), "anchor_id": f"heading:{idx}"}
 
     def find_paragraphs(
         self,
@@ -1636,15 +1668,30 @@ class Document:
         needle = _find_replace._normalize(text).text
         if not needle:
             return []
-        scored: list[dict[str, Any]] = []
+        hits: list[tuple[float, int, Any]] = []  # (score, index, paragraph or None)
         with _com.translate_com_errors():
-            for idx, para in enumerate(self._doc.Paragraphs, start=1):
-                raw = paragraph_text(para)
+            split = _para_index.texts(self._doc)
+            if split is not None:
+                rows: Iterator[tuple[int, str, Any]] = (
+                    (idx, raw, None) for idx, raw in enumerate(split, start=1)
+                )
+            else:
+                rows = (
+                    (idx, paragraph_text(para), para)
+                    for idx, para in enumerate(self._doc.Paragraphs, start=1)
+                )
+            for idx, raw, para in rows:
                 hay = _find_replace._normalize(raw).text
                 if not hay:
                     continue
                 score = difflib.SequenceMatcher(None, needle, hay).ratio()
-                if score < min_score:
+                if score >= min_score:
+                    hits.append((score, idx, para))
+            hits.sort(key=lambda h: (-h[0], h[1]))
+            scored: list[dict[str, Any]] = []
+            for score, idx, para in hits[:limit]:
+                para = para if para is not None else _para_index.paragraph(self._doc, idx)
+                if para is None:
                     continue
                 try:
                     level = int(para.OutlineLevel)
@@ -1655,13 +1702,12 @@ class Document:
                         "anchor_id": f"para:{idx}",
                         "index": idx,
                         "score": round(score, 4),
-                        "text": raw,
+                        "text": paragraph_text(para),
                         "level": level,
                         "is_heading": level < 10,
                     }
                 )
-        scored.sort(key=lambda r: r["score"], reverse=True)
-        return scored[:limit]
+        return scored
 
     def stats(self) -> dict[str, Any]:
         """A one-call summary of the document — the "what am I looking at" read.

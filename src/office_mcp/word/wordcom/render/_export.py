@@ -31,8 +31,11 @@ and the token estimate is a cheap char count.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
+
+from ..model import _para_index
 
 if TYPE_CHECKING:
     from ..model._anchors import Anchor
@@ -474,6 +477,37 @@ def _coalesce_spans(raw: list[Span]) -> tuple[Span, ...]:
     return tuple(out)
 
 
+def _uniform_spans(
+    para_range: Any, image_by_start: dict[int, tuple[int, str]]
+) -> tuple[Span, ...] | None:
+    """The spans of a paragraph formatted one way throughout, or None.
+
+    Reading the paragraph's font once gives the same result as the word walk
+    when bold, italic and underline each hold one value across it, and it has
+    no images or fields. That covers most body text, at a few COM calls per
+    paragraph instead of several per word. None sends the caller to the walk.
+    """
+    start, end = int(para_range.Start), int(para_range.End)
+    if any(start <= pos < end for pos in image_by_start):
+        return None
+    if int(para_range.Fields.Count) > 0:
+        return None
+    font = para_range.Font
+    bold, italic, underline = font.Bold, font.Italic, font.Underline
+    if _WD_UNDEFINED in (bold, italic, underline):
+        return None
+    text = str(para_range.Text or "").rstrip(_PARA_MARKS).replace("\x0c", "")
+    if not text:
+        return ()
+    span = Span(
+        text=text,
+        bold=_font_bool(bold),
+        italic=_font_bool(italic),
+        underline=_font_underline(underline),
+    )
+    return _coalesce_spans([span])
+
+
 def _paragraph_spans(
     para_range: Any, image_by_start: dict[int, tuple[int, str]]
 ) -> tuple[Span, ...]:
@@ -492,6 +526,11 @@ def _paragraph_spans(
             continue
         r = hl.Range
         links.append((int(r.Start), int(r.End), href))
+
+    if not links:
+        uniform = _uniform_spans(para_range, image_by_start)
+        if uniform is not None:
+            return uniform
 
     raw: list[Span] = []
     for word in para_range.Words:
@@ -644,24 +683,31 @@ def walk_blocks(doc: Document, within: str | Anchor | None = None) -> list[Block
         except Exception:
             continue
     heading_styles = _builtin_heading_styles(doc_com)
+    # Outline levels of the heading paragraphs in scope, found in a few calls
+    # rather than one OutlineLevel read per paragraph.
+    outline_levels = {
+        index: level
+        for index, level, _para in _para_index.headings(
+            doc_com, start=lo or 0, end=hi if hi is not None else None
+        )
+    }
 
     blocks: list[Block] = []
     seen_tables: set[int] = set()
-    for idx, para in enumerate(doc_com.Paragraphs, start=1):
+    if lo is not None and hi is not None:
+        rows: Iterable[tuple[int, Any]] = _para_index.paragraphs_starting_in(doc_com, lo, hi)
+    else:
+        rows = enumerate(doc_com.Paragraphs, start=1)
+    for idx, para in rows:
         pr = para.Range
         start = int(pr.Start)
-        if lo is not None and hi is not None and not (lo <= start < hi):
-            continue
         in_table = next((ti for (ts, te, ti) in tables if ts <= start < te), None)
         if in_table is not None:
             if in_table not in seen_tables:
                 seen_tables.add(in_table)
                 blocks.append(_table_block(doc, in_table, image_by_start))
             continue
-        try:
-            outline_level = int(para.OutlineLevel)
-        except Exception:
-            outline_level = _BODY_OUTLINE_LEVEL
+        outline_level = outline_levels.get(idx, _BODY_OUTLINE_LEVEL)
         try:
             style: str | None = str(pr.Style.NameLocal)
         except Exception:

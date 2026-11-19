@@ -70,13 +70,13 @@ def test_insert_break_section_resets_break_paragraph_to_normal(fake_word):
 
 def test_insert_break_page_does_not_touch_paragraph_style(fake_word):
     # Page breaks are an in-paragraph character — no new paragraph, no reset.
+    para = fake_word.ActiveDocument.Range(24, 24).Paragraphs(1)
+    style_before = para.Range.Style
     with wordcom.attach() as word:
         doc = word.documents.active
         with doc.edit("break"):
             doc.bookmarks["Address"].insert_break("page")
-    rng = fake_word.ActiveDocument.Range(24, 24)
-    # Style was never assigned a real style object (still a bare auto-mock).
-    assert not isinstance(getattr(rng.Paragraphs(1).Range.Style, "NameLocal", None), str)
+    assert para.Range.Style is style_before
 
 
 def test_insert_break_unknown_kind_raises(fake_word):

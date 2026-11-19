@@ -63,12 +63,7 @@ def dispatch_read(worker: Worker, command: str, p: dict[str, Any]) -> Any:
             if command == "outline":
                 return doc.paragraphs.list() if p.get("all_paragraphs") else doc.outline()
             if command == "paragraphs":
-                items = doc.paragraphs.list()
-                start, count = p.get("start"), p.get("count")
-                if start is not None or count is not None:
-                    s = (start or 1) - 1
-                    items = items[s : s + count] if count is not None else items[s:]
-                return items
+                return doc.paragraphs.list(start=p.get("start") or 1, count=p.get("count"))
             if command == "find":
                 text = p.get("text")
                 if text is None:
