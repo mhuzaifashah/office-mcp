@@ -1486,13 +1486,17 @@ class Document:
         bottom up. `text` may contain `\\r` / `\\n` to append several paragraphs
         at once. If `style` is given it must name a style defined in the
         document, otherwise `StyleNotFoundError` is raised before any text is
-        inserted. Wrap in `doc.edit(...)` for atomic undo. Not idempotent —
+        inserted; without it the new paragraphs are ``Normal``, not the style of
+        the paragraph before them. Wrap in `doc.edit(...)` for atomic undo. Not idempotent —
         each call adds another paragraph.
 
         Equivalent to calling `insert_paragraph_after(text, style=style)` on the
         document's last paragraph, without having to locate it first.
         """
-        style_obj = self.styles[style] if style is not None else None  # validate early
+        # Validate early. Without a style the new paragraph is Normal: a split-off
+        # paragraph would otherwise inherit the last one's style, so body text
+        # appended after a heading became another heading.
+        style_obj = self.anchor_by_id("end")._paragraph_style_or_normal(style)
         with _com.translate_com_errors():
             doc_com = self._doc
             doc_end = int(doc_com.Content.End)

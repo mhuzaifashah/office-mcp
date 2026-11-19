@@ -45,6 +45,17 @@ def test_append_paragraph_styles_full_span(fake_word):
     )
 
 
+def test_append_paragraph_without_style_is_normal(fake_word):
+    # A split-off paragraph inherits the last one's style; after a heading that
+    # made appended body text a heading. Without a style it must be Normal.
+    with wordcom.attach() as word:
+        doc = word.documents.active
+        with doc.edit("append-plain"):
+            doc.append_paragraph("Body")
+    styled = fake_word.ActiveDocument.Range(35, 39).Style
+    assert getattr(styled, "NameLocal", None) == "Normal"
+
+
 def test_append_inline_uses_content_insert_after(fake_word):
     with wordcom.attach() as word:
         doc = word.documents.active
