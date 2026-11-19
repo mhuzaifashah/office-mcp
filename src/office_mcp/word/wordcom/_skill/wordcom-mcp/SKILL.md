@@ -10,25 +10,25 @@ the document the user has **open right now**, politely: the user's cursor,
 selection and scroll position are preserved, and each call's edits collapse into
 a single Ctrl-Z.
 
-There are four calls:
+There are four tools:
 
-| Call | Use it for |
+| Tool | Use it for |
 | ---- | ---------- |
-| `read(command, …)` | every read-only query (see **Reading**) |
-| `exec(ops, label?, tracked?)` | **every edit**: a list of op objects applied as one undo step (see **Editing**) |
-| `snapshot(pages? \| anchor?, …)` | render page(s) to PNG so you can *see* the layout |
-| `write(command, …)` | saving (`save` / `save_as` / `export_pdf`) and toggling Track Changes (`track`) |
+| `word_read(command, …)` | every read-only query (see **Reading**) |
+| `word_exec(ops, label?, tracked?)` | **every edit**: a list of op objects applied as one undo step (see **Editing**) |
+| `word_snapshot(pages? \| anchor?, …)` | render page(s) to PNG so you can *see* the layout |
+| `word_write(command, …)` | opening a file (`open`), saving (`save` / `save_as` / `export_pdf`) and toggling Track Changes (`track`) |
 
-Every call takes an optional `doc` (a document name from `status`); it defaults
-to the active document. This guide is also returned by `read("guide")`.
+Every tool takes an optional `doc` (a document name from `status`); it defaults
+to the active document. This guide is also returned by `word_read("guide")`.
 
 ## First, orient yourself
-1. `read("status")`: is Word reachable, and which documents are open.
-2. `read("outline")`: heading tree with `heading:N` ids (`all_paragraphs: true` = every paragraph).
-3. `read("paragraphs", start?, count?)`: every paragraph with `para:N` ids and character offsets.
-4. `read("find", text)`: locate a phrase (tolerant of whitespace and smart quotes); returns `range:START-END` ids.
+1. `word_read("status")`: is Word reachable, and which documents are open.
+2. `word_read("outline")`: heading tree with `heading:N` ids (`all_paragraphs: true` = every paragraph).
+3. `word_read("paragraphs", start?, count?)`: every paragraph with `para:N` ids and character offsets.
+4. `word_read("find", text)`: locate a phrase (tolerant of whitespace and smart quotes); returns `range:START-END` ids.
 
-For a large document, `read("digest", budget?)` gives a token-budgeted overview
+For a large document, `word_read("digest", budget?)` gives a token-budgeted overview
 where every heading keeps its anchor id.
 
 ## Anchors: how you address things
@@ -61,7 +61,7 @@ edits. To get a durable handle on unnamed content, run the `pin` op on it
 (`pin_outline` pins every heading at once).
 
 ## Reading
-All of these are `read(command, …)`; parameters are keyword arguments.
+All of these are `word_read(command, …)`; the other parameters are named fields.
 
 - **Structure:** `status` · `outline` (`all_paragraphs`) · `paragraphs` (`start`, `count`) · `sections` (page setup per section) · `stats` (page/word/paragraph/table/image/comment/revision counts and `saved`) · `styles`.
 - **Locate:** `find` (`text`, `in_anchor`): exact-ish locate, returns `range:` ids · `find_paragraphs` (`text`, `limit`, `min_score`): **fuzzy** paragraph search returning ranked `para:N` candidates · `location` (`anchor_id`): page span, line, column, `in_table` · `nearest_heading` (`anchor_id`, `direction`: `before`|`after`).
@@ -74,9 +74,9 @@ All of these are `read(command, …)`; parameters are keyword arguments.
 - **Change tracking:** `checkpoint` (`include`: `text`|`text+style`|`text+format`, `within`) returns a fingerprint token; `diff` (`checkpoint`, or `cp_a` + `cp_b`) returns a change list (`replace`/`insert`/`delete`/`restyle`/`reformat`, `table_*`) with current anchors. This is how you answer "what changed" and verify your own edits landed; an unchanged doc returns `[]`.
 - **This guide:** `guide`.
 
-## Editing: `exec`
+## Editing: `word_exec`
 Every edit is an **op**: a JSON object with an `op` name and its fields. Send one
-or many in a single `exec` call:
+or many in a single `word_exec` call:
 
 ```json
 {
@@ -155,7 +155,7 @@ accepts `before` / `after` / `where` to pick the side of the anchor.
 ### Formatting and styles
 | Op | Fields | Notes |
 | -- | ------ | ----- |
-| `apply_style` | **anchor_id**, **name** | style names: `read("styles")` |
+| `apply_style` | **anchor_id**, **name** | style names: `word_read("styles")` |
 | `format_paragraph` | **anchor_id**, alignment, left_indent, right_indent, first_line_indent, space_before, space_after, line_spacing, page_break_before, keep_together, keep_with_next, widow_control | `line_spacing`: a multiple (`1.5`), `single`/`double`, or an exact length (`"14pt"`). `page_break_before` is the reflow-safe way to start a paragraph on a new page |
 | `format_run` | **anchor_id**, bold, italic, underline, strikethrough, font, size, color, highlight, subscript, superscript, small_caps, all_caps, spacing | character formatting; pair with a `range:` from `find` to style a phrase |
 | `set_shading` | **anchor_id**, fill, pattern | paragraph, cell, row or column fill |
@@ -174,7 +174,7 @@ accepts `before` / `after` / `where` to pick the side of the anchor.
 | `remove_list` · `restart_numbering` · `indent_list` · `outdent_list` | **anchor_id** | |
 
 ### Tables
-`table` is the 1-based table index (`read("table_list")`). Cells are anchors
+`table` is the 1-based table index (`word_read("table_list")`). Cells are anchors
 (`table:N:R:C`), so `replace`, `apply_style`, `format_paragraph`, `set_shading`
 etc. work on them too. After `merge_cells`/`split_cell` the table is non-uniform
 and `table:N:R:C` addresses *physical* cells.
@@ -263,7 +263,7 @@ their fields are optional: only what you pass is changed.
 | `pin` | **anchor_id**, name | returns `pin:CODE` |
 | `pin_outline` | levels | pins every heading; returns the `{heading:N: pin:CODE}` map |
 | `add_hyperlink` | **anchor_id**, `url` \| `bookmark`, text, screen_tip | `text` inserts new linked text; without it the anchor's range is linked |
-| `set_hyperlink` | **index**, address, sub_address, text, screen_tip | edit an existing link (`read("hyperlinks")`) |
+| `set_hyperlink` | **index**, address, sub_address, text, screen_tip | edit an existing link (`word_read("hyperlinks")`) |
 | `mark_index_entry` | **anchor_id**, **entry**, cross_reference, bold, italic | `"main:sub"` nests |
 | `insert_index` | **anchor_id**, columns, run_in, right_align_page_numbers, ± where | builds the index from marked entries |
 | `set_bibliography_style` | **style** | `APA`/`MLA`/`Chicago`/`IEEE`/`Turabian` |
@@ -283,7 +283,7 @@ their fields are optional: only what you pass is changed.
 | `write_header` / `write_footer` | **section**, **text**, which | `which`: `primary` (default)/`first`/`even` |
 | `set_watermark` | **text**, font, color, layout, semitransparent | `layout`: `diagonal`/`horizontal`; replaces any existing one |
 | `remove_watermark` | | |
-| `apply_theme` | **theme** | a built-in name (`read("themes")`) or a local `.thmx` path |
+| `apply_theme` | **theme** | a built-in name (`word_read("themes")`) or a local `.thmx` path |
 | `set_theme_colors` | scheme, colors | `colors`: `{"accent1": "#1A73E8", "text1": "navy", …}` (`text1`/`background1`/`text2`/`background2`/`accent1`..`accent6`/`hyperlink`/`followed_hyperlink`) |
 | `set_theme_fonts` | scheme, major, minor | heading / body fonts |
 
@@ -291,8 +291,8 @@ their fields are optional: only what you pass is changed.
 | Op | Fields | Notes |
 | -- | ------ | ----- |
 | `add_comment` | **anchor_id**, **text**, author | |
-| `resolve_comment` / `delete_comment` | **index** | 1-based, from `read("comments")` |
-| `accept_revision` / `reject_revision` | **index** | from `read("revisions")` |
+| `resolve_comment` / `delete_comment` | **index** | 1-based, from `word_read("comments")` |
+| `accept_revision` / `reject_revision` | **index** | from `word_read("revisions")` |
 | `accept_all_revisions` / `reject_all_revisions` | anchor_id | optionally scoped to one anchor |
 | `set_property` | **name**, **value**, custom | built-in (Title, Author, …) or, with `custom: true`, a custom property |
 | `delete_property` | **name** | custom properties only |
@@ -300,45 +300,52 @@ their fields are optional: only what you pass is changed.
 | `delete_variable` | **name** | |
 
 ## Snapshot: see the layout
-`snapshot(pages?, anchor?, dpi?, max_dim?, markup?)` exports a pixel-faithful PDF
+`word_snapshot(pages?, anchor?, dpi?, max_dim?, markup?)` exports a pixel-faithful PDF
 of the live document and returns the requested pages as PNG images: real fonts,
 spacing and page geometry. Use it to judge layout and styling.
 
 - Target **at most one** of `pages` (`"4"` or `"2-5"`) or `anchor` (the page(s) it
-  occupies; a `heading:` expands to its whole section). Neither = whole document.
+  occupies; a `heading:` expands to its whole section). Neither = every page, up to the
+  server's page limit; a note names the `pages` range to ask for next.
 - `max_dim` caps each page's long edge in pixels (only ever lowers resolution);
   ~1000 stays legible and keeps image tokens predictable. `dpi` is 72-300 (default 150).
 - `markup: "all"` shows tracked changes and comments; the default `none` shows the
-  final document. The structured list is `read("revisions")`.
+  final document. The structured list is `word_read("revisions")`.
 
-## Saving: gated
-- `write("save")` · `write("save_as", path, overwrite?)` (a `.docx`) ·
-  `write("export_pdf", path, from_page?, to_page?)` (a PDF, the recommended deliverable).
+## Opening and saving
+- `word_write("open", path)` opens a local document (starting Word if needed), or
+  activates it if it is already open.
+- `word_write("save")` · `word_write("save_as", path, overwrite?)` (a `.docx`) ·
+  `word_write("export_pdf", path, from_page?, to_page?)` (a PDF, the recommended deliverable).
 - **Default-deny:** saving only writes inside directories the server was
   configured to allow. With none configured, every save fails with
   `path_not_allowed`. `save` needs a document that was saved once before;
   `save_as` refuses to overwrite unless `overwrite: true`.
-- `write("track", on)` turns Track Changes on or off.
+- `word_write("track", on)` turns Track Changes on or off.
 
 ## Errors
-Failures carry a stable `code` and a `retryable` flag:
+Failures come back as tool errors whose JSON body is
+`{"error": {"code", "message", "retryable", "hint", …}}`. The `hint` says what to
+do next. Codes:
 
 | Code | Meaning | What to do |
 | ---- | ------- | ---------- |
 | `anchor_not_found` | anchor id doesn't resolve (often a stale positional id), or `find` matched nothing | re-read `outline` / `paragraphs`, then retry |
-| `style_not_found` | unknown style name | check `read("styles")` |
+| `style_not_found` | unknown style name | check `word_read("styles")` |
 | `ambiguous_match` | `find_replace` hit several places | add `occurrence: N` or `all: true` |
 | `replace_verification` | a whole-document match inside a table couldn't be verified | scope with `in: "table:N:R:C"` |
 | `word_busy` | a modal dialog is open in Word, or Word didn't answer within the call timeout | **retryable**: wait and retry |
-| `word_not_running` | Word isn't open | ask the user to open Word |
-| `document_not_found` | no open document with that `doc` name | check `read("status")` |
+| `word_not_running` | Word isn't open | ask the user to open Word, or `word_write("open", path)` |
+| `document_not_found` | no open document with that `doc` name | check `word_read("status")` |
 | `excel_not_available` | `insert_chart` without Excel | only after Excel is installed |
 | `path_not_allowed` | save/image path outside the allowed directories, or non-local | use an allowed local path, or base64 for images |
+| `file_not_found` | `open` was given a path that doesn't exist | check the path with the user |
 | `error` | anything else (bad input, missing field) | fix the input |
+| `internal_error` | an unexpected failure in the server | report it; retrying rarely helps |
 
 ## Typical workflow
-1. `read("status")` to confirm Word and the target document.
-2. `read("outline")` / `paragraphs` / `find` to get the anchor ids you need.
-3. One `exec` call per logical change. It applies as one undo step and rolls back
+1. `word_read("status")` to confirm Word and the target document.
+2. `word_read("outline")` / `paragraphs` / `find` to get the anchor ids you need.
+3. One `word_exec` call per logical change. It applies as one undo step and rolls back
    as a whole if any op fails.
 4. Verify: read back, `diff` against a `checkpoint`, or `snapshot` the page.

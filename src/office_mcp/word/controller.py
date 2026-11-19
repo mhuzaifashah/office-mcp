@@ -32,7 +32,7 @@ from .wordcom.runtime._dispatch import (
     dispatch_write,
 )
 from .wordcom.runtime._path_policy import PathPolicy, reject_nonlocal_path
-from .wordcom.runtime._worker import ComWorker, call_timeout_from_env
+from .wordcom.runtime._worker import ComWorker, Worker, call_timeout_from_env
 
 __all__ = ["WordController"]
 
@@ -47,6 +47,8 @@ class WordController:
         image_dirs: Optional allowlist further restricting image-source paths
             (non-local UNC/URL forms are always screened regardless). When
             ``None``, read from ``WORDCOM_IMAGE_DIRS``.
+        worker: The thread COM calls run on. Defaults to a new `ComWorker`;
+            tests pass an `InlineWorker` to run calls on the caller's thread.
 
     Each Word call waits at most ``WORDCOM_CALL_TIMEOUT`` seconds (default 300;
     ``0`` = no limit) and then fails with a retryable `WordBusyError`.
@@ -60,8 +62,9 @@ class WordController:
         *,
         save_dirs: list[str] | None = None,
         image_dirs: list[str] | None = None,
+        worker: Worker | None = None,
     ) -> None:
-        self._worker = ComWorker(timeout=call_timeout_from_env())
+        self._worker = worker if worker is not None else ComWorker(timeout=call_timeout_from_env())
         if save_dirs is None and image_dirs is None:
             self._policy = PathPolicy.from_env()
         else:
@@ -138,7 +141,9 @@ class WordController:
 
     def close(self) -> None:
         """Stop the COM worker thread (does not close Word). The controller is unusable after."""
-        self._worker.shutdown()
+        shutdown = getattr(self._worker, "shutdown", None)
+        if shutdown is not None:
+            shutdown()
 
     def __enter__(self) -> WordController:
         return self

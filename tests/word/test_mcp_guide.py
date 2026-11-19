@@ -11,7 +11,9 @@ from __future__ import annotations
 import inspect
 import re
 
+from office_mcp.word import tools as _tools
 from office_mcp.word.wordcom._guide import skill_body
+from office_mcp.word.wordcom.exceptions import classify
 from office_mcp.word.wordcom.runtime import _dispatch
 from office_mcp.word.wordcom.runtime._ops import OP_REQUIRED_FIELDS
 
@@ -32,6 +34,12 @@ def _rows_for(op: str) -> list[str]:
 def _read_commands() -> set[str]:
     src = inspect.getsource(_dispatch.dispatch_read)
     return set(re.findall(r'command == "([a-z_]+)"', src))
+
+
+def _extra_codes() -> set[str]:
+    """Codes from `classify` that have no hint of their own."""
+    src = inspect.getsource(classify)
+    return set(re.findall(r'return "([a-z_]+)", ', src))
 
 
 def test_every_exec_op_has_a_row():
@@ -55,17 +63,8 @@ def test_no_row_names_an_unknown_op():
     known = set(OP_REQUIRED_FIELDS)
     named = {name for r in ROWS for name in _op_cell(r)}
     op_like = {n for n in named if "_" in n or n in known}
-    non_ops = {
-        "anchor_not_found",
-        "style_not_found",
-        "ambiguous_match",
-        "replace_verification",
-        "word_busy",
-        "word_not_running",
-        "document_not_found",
-        "excel_not_available",
-        "path_not_allowed",
-    }
+    # Error codes the tools explain (their table shares the row shape).
+    non_ops = {*_tools._HINTS, "error", "internal_error", *_extra_codes()}
     unknown = sorted(op_like - known - non_ops)
     assert not unknown, f"guide rows name ops that don't exist: {unknown}"
 
