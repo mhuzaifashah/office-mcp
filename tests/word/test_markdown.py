@@ -12,6 +12,7 @@ from office_mcp.word.wordcom.content._markdown_blocks import (
     HEADING,
     NORMAL,
     NUMBER,
+    TABLE,
     Block,
     parse_markdown,
 )
@@ -112,3 +113,30 @@ class TestMarkdownSegments:
         ]
         segs = _markdown_segments(blocks)
         assert [s[1] for s in segs] == [None, "bulleted", None]
+
+
+class TestTables:
+    def test_pipe_table_becomes_a_table_block(self) -> None:
+        blocks = parse_markdown("Intro.\n\n| A | B |\n| --- | :-: |\n| 1 | **2** |\n\nAfter.")
+        assert [b.kind for b in blocks] == [NORMAL, TABLE, NORMAL]
+        assert blocks[1].rows == (("A", "B"), ("1", "**2**"))
+
+    def test_escaped_pipe_stays_in_its_cell(self) -> None:
+        (table,) = parse_markdown("| A |\n|---|\n| x \\| y |")
+        assert table.rows == (("A",), ("x | y",))
+
+    def test_short_rows_pad_and_long_rows_widen(self) -> None:
+        (table,) = parse_markdown("| A | B |\n|---|---|\n| 1 |\n| 1 | 2 | 3 |")
+        assert table.rows == (("A", "B", ""), ("1", "", ""), ("1", "2", "3"))
+
+    def test_pipe_lines_without_a_separator_stay_text(self) -> None:
+        assert _kinds("| a | b |\nplain") == [(NORMAL, "| a | b | plain", None)]
+
+    def test_horizontal_rule_is_only_a_break(self) -> None:
+        assert _kinds("one\n---\ntwo\n***") == [(NORMAL, "one", None), (NORMAL, "two", None)]
+
+    def test_segment_is_one_tab_separated_paragraph_per_row(self) -> None:
+        (table,) = parse_markdown("| A | B |\n|---|---|\n| 1\tx | 2 |")
+        assert _markdown_segments([table]) == [
+            ([{"text": "A\tB", "style": "Normal"}, {"text": "1 x\t2", "style": "Normal"}], "table")
+        ]

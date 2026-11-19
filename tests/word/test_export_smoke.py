@@ -194,3 +194,32 @@ def test_read_digest_keeps_every_heading_under_budget(scratch_doc, capsys):
         print(
             "\n----- doc.read(budget=400) -----\n" + digest + "\n--------------------------------"
         )
+
+
+def test_insert_markdown_builds_tables_in_place(scratch_doc):
+    """Pipe tables become Word tables where they sit; text after them stays put."""
+    from office_mcp.word.wordcom.runtime import _ops
+
+    doc = scratch_doc
+    with doc.edit("smoke: seed"):
+        doc.append_paragraph("Before.")
+        doc.append_paragraph("After.")
+    target = doc.paragraphs.list()[-2]["anchor_id"]
+    md = (
+        "## Results\n\nIntro.\n\n| Case | Result |\n| --- | --- |\n| A-1 | **Pass** |\n"
+        "| A-2 | Fail |\n\n| X | Y |\n|---|---|\n| 1 | 2 |\n\nClosing line."
+    )
+    with doc.edit("smoke: markdown tables"):
+        out = _ops.apply_op(doc, {"op": "insert_markdown", "anchor_id": target, "markdown": md})
+    com = doc.com
+    assert out["tables"] == [1, 2]
+    first, second = com.Tables(1), com.Tables(2)
+    assert (first.Rows.Count, first.Columns.Count) == (3, 2)
+    assert str(first.Cell(2, 2).Range.Text).rstrip("\r\x07") == "Pass"
+    assert first.Cell(2, 2).Range.Font.Bold == -1
+    assert first.Rows(1).HeadingFormat == -1
+    assert (second.Rows.Count, second.Columns.Count) == (2, 2)  # not merged into the first
+    texts = [str(p.Range.Text).rstrip("\r\x07") for p in com.Paragraphs]
+    assert texts[-1] == "After." and "Closing line." in texts and "Before." in texts
+    start, end = (int(x) for x in out["anchor_id"].split(":")[1].split("-"))
+    assert str(com.Range(start, end).Text).rstrip("\r").endswith("Closing line.")

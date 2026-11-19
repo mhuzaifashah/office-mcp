@@ -15,11 +15,16 @@ Supported, on its own line:
 - ``1. `` (one-or-more digits, a dot, a space) → a numbered list item.
 - a blank line separates paragraphs; consecutive plain lines join into one
   `Normal` paragraph (a soft wrap, CommonMark-style).
+- a GFM pipe table (a header row, a ``| --- |`` separator row, then body
+  rows) → a Word table. Cells keep their inline markup; a row with extra
+  cells widens the table.
+- a horizontal rule (``---``, ``***``, ``___``) separates paragraphs and
+  adds nothing.
 - inline spans (`**bold**`, `*italic*`, `***both***`) are left intact in the
   block text — `insert_block` runs them through `_inline_runs.parse_markup` downstream.
 
-Explicitly **out of scope** in v1 (deferred until asked): code fences, nested /
-mixed lists, block quotes, tables, links, images. Anything that isn't a heading,
+Explicitly **out of scope** (deferred until asked): code fences, nested /
+mixed lists, block quotes, links, images. Anything that isn't a heading,
 list item, or blank line is plain paragraph text — so a stray ``> quote`` or
 ```` ``` ```` fence lands as literal text rather than being silently dropped.
 
@@ -37,12 +42,15 @@ HEADING = "heading"
 BULLET = "bullet"
 NUMBER = "number"
 NORMAL = "normal"
+TABLE = "table"
 
 # Marker patterns, matched after stripping leading whitespace (the subset is
 # flat — there are no nested list levels in v1, so indentation is insignificant).
 _HEADING = re.compile(r"(#{1,3}) +(.*)$")
 _BULLET = re.compile(r"[-*] +(.*)$")
 _NUMBER = re.compile(r"\d+\. +(.*)$")
+_THEMATIC_BREAK = re.compile(r"(-{3,}|\*{3,}|_{3,})")
+_TABLE_SEPARATOR = re.compile(r"\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?")
 
 
 @dataclass(frozen=True)
@@ -57,6 +65,31 @@ class Block:
     kind: str
     text: str
     level: int | None = None
+    # A table's rows (header first), each a tuple of cell texts.
+    rows: tuple[tuple[str, ...], ...] | None = None
+
+
+def _table_cells(line: str) -> list[str]:
+    """Split one pipe-table row into cell texts (``\\|`` is a literal pipe)."""
+    body = line.strip()
+    if body.startswith("|"):
+        body = body[1:]
+    if body.endswith("|") and not body.endswith("\\|"):
+        body = body[:-1]
+    cells = re.split(r"(?<!\\)\|", body)
+    return [c.strip().replace("\\|", "|") for c in cells]
+
+
+def _table_block(lines: list[str]) -> Block | None:
+    """A TABLE block from consecutive ``|`` lines, or None if they aren't a GFM table."""
+    if len(lines) < 2 or not _TABLE_SEPARATOR.fullmatch(lines[1].strip()):
+        return None
+    cells = [_table_cells(lines[0]), *(_table_cells(line) for line in lines[2:])]
+    # A row with more cells than the header widens the table rather than losing
+    # data; short rows are padded.
+    width = max(len(row) for row in cells)
+    rows = tuple(tuple(row + [""] * (width - len(row))) for row in cells)
+    return Block(TABLE, "", rows=rows)
 
 
 def parse_markdown(md: str) -> list[Block]:
@@ -74,10 +107,25 @@ def parse_markdown(md: str) -> list[Block]:
             blocks.append(Block(NORMAL, " ".join(para)))
             para.clear()
 
-    for raw in md.splitlines():
-        line = raw.strip()
-        if not line:
-            flush()
+    lines = md.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        i += 1
+        if not line or _THEMATIC_BREAK.fullmatch(line):
+            flush()  # a horizontal rule has no Word equivalent: just a break
+            continue
+        if line.startswith("|"):
+            run = [line]
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                run.append(lines[i].strip())
+                i += 1
+            table = _table_block(run)
+            if table is not None:
+                flush()
+                blocks.append(table)
+            else:
+                para.extend(run)  # not a table: literal text, as before
             continue
         if m := _HEADING.fullmatch(line):
             flush()

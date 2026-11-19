@@ -1040,17 +1040,25 @@ def _markdown_segments(blocks: list[Any]) -> list[tuple[list[dict[str, Any]], st
     A maximal run of same-kind list items becomes one segment whose `list_type`
     is `"bulleted"`/`"numbered"` (applied over the span after insertion). A
     maximal run of heading/normal blocks becomes one segment with `list_type`
-    `None`. Normal paragraphs are pinned to the built-in ``Normal`` style so they
-    don't inherit a heading style from the insertion point.
+    `None`. A table becomes a `"table"` segment of one tab-separated paragraph
+    per row, converted to a Word table after insertion. Normal paragraphs are
+    pinned to the built-in ``Normal`` style so they don't inherit a heading
+    style from the insertion point.
     """
-    from ..content._markdown_blocks import BULLET, HEADING, NORMAL, NUMBER
+    from ..content._markdown_blocks import BULLET, HEADING, NORMAL, NUMBER, TABLE
 
     segments: list[tuple[list[dict[str, Any]], str | None]] = []
     i, n = 0, len(blocks)
     while i < n:
         kind = blocks[i].kind
         items: list[dict[str, Any]] = []
-        if kind in (BULLET, NUMBER):
+        if kind == TABLE:
+            for row in blocks[i].rows or ():
+                cells = [cell.replace("\t", " ") for cell in row]
+                items.append({"text": "\t".join(cells), "style": "Normal"})
+            segments.append((items, "table"))
+            i += 1
+        elif kind in (BULLET, NUMBER):
             style = "List Bullet" if kind == BULLET else "List Number"
             list_type = "bulleted" if kind == BULLET else "numbered"
             while i < n and blocks[i].kind == kind:
@@ -1070,6 +1078,18 @@ def _markdown_segments(blocks: list[Any]) -> list[tuple[list[dict[str, Any]], st
 # ---------------------------------------------------------------------------
 # Base
 # ---------------------------------------------------------------------------
+
+
+_WD_SEPARATE_BY_TABS = 1
+
+
+def _style_markdown_table(doc: Document, table: Any) -> None:
+    """Give a table made from Markdown a grid and a bold, repeating header row."""
+    if "Table Grid" in doc.styles:
+        table.Style = doc.styles["Table Grid"].com
+    header = table.Rows(1)
+    header.Range.Font.Bold = True
+    header.HeadingFormat = True
 
 
 class Anchor(ABC):
@@ -1430,13 +1450,22 @@ class Anchor(ABC):
         segments = _markdown_segments(blocks)
         items: list[dict[str, Any]] = []
         list_groups: list[tuple[int, int, str]] = []  # (first_para, last_para, list_type)
+        table_groups: list[tuple[int, int, int]] = []  # (first_row, last_row, columns)
+        previous_was_table = False
         for seg_items, list_type in segments:
+            if list_type == "table" and previous_was_table:
+                # Word merges a table into one directly above it; keep a gap.
+                items.append({"text": "", "style": "Normal"})
             start_idx = len(items)
             items.extend(seg_items)
-            if list_type is not None:
+            if list_type == "table":
+                columns = str(seg_items[0]["text"]).count("\t") + 1
+                table_groups.append((start_idx, len(items) - 1, columns))
+            elif list_type is not None:
                 list_groups.append((start_idx, len(items) - 1, list_type))
+            previous_was_table = list_type == "table"
         rng = self.insert_block(items, where=where)
-        if not list_groups:
+        if not list_groups and not table_groups:
             return rng
         # Recompute each paragraph's offset exactly as insert_block walks them
         # (UTF-16 text length + one CR each, from the block's start), so a list
@@ -1450,7 +1479,21 @@ class Anchor(ABC):
         for first, last, list_type in list_groups:
             span = RangeAnchor(self._doc, offsets[first], offsets[last] + _utf16_len(texts[last]))
             span.apply_list(list_type)
-        return rng
+        if not table_groups:
+            return rng
+        # Tables last, bottom-up: converting rows to a table adds row marks, which
+        # shifts everything after it, so earlier offsets stay valid this way.
+        with _com.translate_com_errors():
+            doc_com = self._doc.com
+            end_before = int(doc_com.Content.End)
+            for first, last, columns in reversed(table_groups):
+                rows = doc_com.Range(offsets[first], offsets[last] + _utf16_len(texts[last]))
+                table = rows.ConvertToTable(
+                    Separator=_WD_SEPARATE_BY_TABS, NumRows=last - first + 1, NumColumns=columns
+                )
+                _style_markdown_table(self._doc, table)
+            grown = int(doc_com.Content.End) - end_before
+        return RangeAnchor(self._doc, rng.start, rng.end + grown)
 
     def insert_image(
         self,

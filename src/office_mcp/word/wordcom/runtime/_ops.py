@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..content._images import _decode_base64
 from ..exceptions import AmbiguousMatchError, OpError, WordcomError
+from . import _com
 
 if TYPE_CHECKING:
     from ..model._application import Word
@@ -629,6 +630,20 @@ def validate_op(op: dict[str, Any]) -> str:
     return kind
 
 
+def _has_markdown_table(markdown: str) -> bool:
+    from ..content._markdown_blocks import TABLE, parse_markdown
+
+    return any(block.kind == TABLE for block in parse_markdown(markdown))
+
+
+def _table_indices_in(doc: Any, start: int, end: int) -> list[int]:
+    """1-based indices of the tables inside `[start, end)`, for an op's output."""
+    with _com.translate_com_errors():
+        before = int(doc.com.Range(0, start).Tables.Count)
+        inside = int(doc.com.Range(start, end).Tables.Count)
+    return list(range(before + 1, before + inside + 1))
+
+
 def apply_op(doc: Document, op: dict[str, Any]) -> dict[str, Any] | None:
     """Apply a single op from an exec batch. Raises WordcomError on bad input.
 
@@ -686,7 +701,10 @@ def apply_op(doc: Document, op: dict[str, Any]) -> dict[str, Any] | None:
         rng = doc.anchor_by_id(op["anchor_id"]).insert_markdown(
             op["markdown"], where=("before" if op_before(op) else "after")
         )
-        return {"anchor_id": rng.anchor_id, **_apply_bind(doc, op, rng)}
+        out = {"anchor_id": rng.anchor_id, **_apply_bind(doc, op, rng)}
+        if _has_markdown_table(op["markdown"]):
+            out["tables"] = _table_indices_in(doc, rng.start, rng.end)
+        return out
     elif kind == "replace_section":
         if ("body" in op) == ("markdown" in op):
             raise OpError("op 'replace_section' requires exactly one of 'body' or 'markdown'")

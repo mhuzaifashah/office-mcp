@@ -74,6 +74,7 @@ Each op is an object {"op": "<name>", ...fields}. Ops target anchor ids from wor
 If any op fails, every op before it is rolled back, so the document is unchanged. The error names the failing op (failure.index) and says how to fix it; fix that op and resend the whole batch. On success the result lists each op's outputs (new table index, pin id, shape id ...) and warns about fields an op ignored.
 
 Common ops: insert_paragraph, insert_block, insert_markdown, replace, find_replace, delete_paragraph, apply_style, format_run, format_paragraph, apply_list, create_table, set_cell, insert_image, add_comment, write_header, insert_toc.
+To add long content (a chapter from Markdown), send it whole in one insert_markdown op: headings, lists and pipe tables all land in order.
 The full op list with required fields is in word_read(command="guide"); read it once before your first edit.
 
 Example: {"ops": [{"op": "insert_paragraph", "anchor_id": "heading:4", "text": "New paragraph."}, {"op": "find_replace", "find": "Q3", "text": "Q4", "all": true}]}

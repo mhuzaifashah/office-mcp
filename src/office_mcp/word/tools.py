@@ -648,6 +648,8 @@ shape id ...) and warns about fields an op ignored.
 Common ops: insert_paragraph, insert_block, insert_markdown, replace, find_replace, \
 delete_paragraph, apply_style, format_run, format_paragraph, apply_list, create_table, \
 set_cell, insert_image, add_comment, write_header, insert_toc.
+To add long content (a chapter from Markdown), send it whole in one insert_markdown op: \
+headings, lists and pipe tables all land in order.
 The full op list with required fields is in word_read(command="guide"); read it once \
 before your first edit.
 

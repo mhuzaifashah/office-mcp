@@ -71,7 +71,7 @@ All of these are `word_read(command, …)`; the other parameters are named field
 - **Objects:** `images` · `read_image` (`anchor_id`: `image:N`) returns base64 + mime · `shapes` · `equations` · `charts` · `footnotes` · `endnotes` · `hyperlinks` · `fields` · `comments` · `revisions` · `track` (is Track Changes on).
 - **Metadata & design:** `properties` · `variables` · `theme` · `themes` (built-in theme names) · `format_info` (`anchor_id`): effective paragraph/character formatting with each value's style baseline and an `override` flag · `list_levels` (`anchor_id`).
 - **Quality:** `proofing`: spelling/grammar errors (with `range:` ids) and readability stats · `lint` (`rules`, `within`): publishing defects (dangling headings, tables with no repeating header, split numbered lists, formatting drifted from the style), each fixable finding carrying the op that `regularize` would run.
-- **Change tracking:** `checkpoint` (`include`: `text`|`text+style`|`text+format`, `within`) returns a fingerprint token; `diff` (`checkpoint`, or `cp_a` + `cp_b`) returns a change list (`replace`/`insert`/`delete`/`restyle`/`reformat`, `table_*`) with current anchors. This is how you answer "what changed" and verify your own edits landed; an unchanged doc returns `[]`.
+- **Change tracking:** `checkpoint` (`include`: `text`|`text+style`|`text+format`, `within`) returns a fingerprint token; `diff` (`checkpoint`, or `cp_a` + `cp_b`) returns a change list (`replace`/`insert`/`delete`/`restyle`/`reformat`, `table_*`) with current anchors. This is how you answer "what changed" and verify your own edits landed; an unchanged doc returns `[]`. A whole-document checkpoint reads every paragraph's style and takes a minute or more on a long document; pass `within` (the section you are editing) to keep it to seconds.
 - **This guide:** `guide`.
 
 ## Editing: `word_exec`
@@ -98,9 +98,10 @@ or many in a single `word_exec` call:
   and `rolled_back`. Fix the failing op and resend the **whole** batch. (If
   `rolled_back` is `false`, Word could not undo the batch; re-read before retrying.)
 - **Results.** A successful call returns `ok`, `ops_run`, and `outputs`: one entry
-  per op that produced something (new table `index`, inserted block `range`,
-  `pin`, new `shape:N`/`equation:N`/`chart:N`, footnote id …), each tagged with its
-  op `index`.
+  per op that produced something (new `table` index; `anchor_id`, a `range:` id over
+  inserted content; `tables` made by `insert_markdown`; `pin`; new
+  `shape:N`/`equation:N`/`chart:N`; footnote id …), each tagged with its op `index`.
+  Refer to them as `$ops[N].anchor_id`, `$ops[N].table` and so on.
 - **Warnings, not silence.** A field an op doesn't use (a typo, or `style` on
   `append_inline`) is reported in `warnings` instead of being dropped silently.
 - **Anchors resolve live.** Each op resolves its `anchor_id` against the document
@@ -127,7 +128,14 @@ or many in a single `word_exec` call:
   / `*italic*`.
 - **Markdown** (`insert_markdown`, `replace_section.markdown`): a constrained subset:
   `#`/`##`/`###` headings, `-`/`*` bullets, `1.` numbers, blank-line paragraphs, inline
-  `**bold**`/`*italic*`. No code fences, nested lists, or tables.
+  `**bold**`/`*italic*`, and GFM pipe tables (header row, `| --- |` row, body rows),
+  which become Word tables (`Table Grid`, bold repeating header row) where they sit.
+  No code fences or nested lists; a `---` rule is just a paragraph break.
+- **Long content from Markdown** (a chapter, a report section): send the whole text in
+  **one** `insert_markdown`, tables included. Text after a table then lands in the
+  right place, with no need to find the table's end. Then match the document's look
+  in a second call: `apply_style` / `format_paragraph` over the returned `anchor_id`,
+  `set_table_style` on each index in `tables`.
 
 ## Op reference
 **Required fields in bold**, then optional ones. "± where" means the op also
@@ -137,9 +145,9 @@ accepts `before` / `after` / `where` to pick the side of the anchor.
 | Op | Fields | Notes |
 | -- | ------ | ----- |
 | `insert_paragraph` | **anchor_id**, `text` \| `runs`, style, bind, ± where | new paragraph next to any anchor; exactly one of `text` / `runs`. Without `style` it is `Normal` (it never inherits a heading's style) |
-| `insert_block` | **anchor_id**, **items**, bind, ± where | several styled paragraphs in reading order (unstyled items are `Normal`); returns the block's `range` |
+| `insert_block` | **anchor_id**, **items**, bind, ± where | several styled paragraphs in reading order (unstyled items are `Normal`); returns the block's `anchor_id` (a `range:` id) |
 | `insert_section` | **anchor_id**, **heading**, **body**, level, bind, ± where | a `Heading {level}` plus its body (items shape) |
-| `insert_markdown` | **anchor_id**, **markdown**, bind, ± where | constrained Markdown as real Word structure |
+| `insert_markdown` | **anchor_id**, **markdown**, bind, ± where | constrained Markdown, tables included, as real Word structure; returns `anchor_id` over everything inserted and `tables` (new table indices) |
 | `replace_section` | **anchor_id** (a heading), `body` \| `markdown` | rewrite a heading's body, keeping the heading |
 | `delete_paragraph` | **anchor_id** | removes the paragraph(s) including the mark, so text closes up |
 | `append` / `append_paragraph` | **text**, style | new last paragraph |
