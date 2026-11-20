@@ -91,26 +91,46 @@ def _iso_date(value: Any) -> str | None:
 _TEXT_CHANGE_TYPES: frozenset[str] = frozenset({"insert", "delete"})
 
 
-def segment_runs(
-    final_text: str, base_start: int, runs: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def _deletions_in_text(text: str, base_start: int, deletes: list[dict[str, Any]]) -> bool:
+    """True when `text` still holds the deleted runs (markup shown in Word's view).
+
+    Each delete run must appear in `text` at its own markup offset. A run that
+    starts before the range can't be checked and is left out.
+    """
+    checked = False
+    for run in deletes:
+        start, end = int(run["start"]) - base_start, int(run["end"]) - base_start
+        if start < 0:
+            continue
+        if end > len(text) or _clean(text[start:end]) != _clean(run.get("text")):
+            return False
+        checked = True
+    return checked
+
+
+def segment_runs(text: str, base_start: int, runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Reconstruct a range's insert / delete / unchanged segments from its revisions.
 
-    The subtlety (confirmed against live Word): a range's `Range.Text` is the
-    **final** view — inserted runs are present, *deleted* runs are gone. The
-    deleted characters survive only on the delete `Revision` itself (`run["text"]`),
-    and Word reports revision offsets in a **markup** coordinate space where the
-    deleted text still occupies positions. So we can't just label characters of
-    `final_text`; we walk the markup space and splice the deleted text back in.
+    Word reports revision offsets in a **markup** coordinate space where deleted
+    text still occupies positions. What `Range.Text` returns depends on the
+    window's view (confirmed against live Word):
 
-    `final_text` is the range's `Range.Text`; `base_start` its `Range.Start`;
+    - markup shown (the default "All Markup" / "Simple Markup"): deleted runs
+      are **still in** the text, at their markup offsets;
+    - markup hidden ("No Markup"): deleted runs are **gone** and survive only on
+      the delete `Revision` itself (`run["text"]`).
+
+    `_deletions_in_text` tells the two apart by checking whether each deleted
+    run's text sits in `text` at its own offset. Either way we walk the markup
+    space and take each deleted run's text from the revision.
+
+    `text` is the range's `Range.Text`; `base_start` its `Range.Start`;
     `runs` is `[{change, start, end, text}, …]` for the insert / delete revisions
     overlapping the range (document-absolute markup offsets, with the revision's
     own text). Returns `[{text, change}, …]` in document order — `change` is
     ``"insert"``, ``"delete"``, or ``None`` (unchanged) — from which:
 
-    - **final** (accept-all) = the segments whose `change` is not ``"delete"``
-      (== `final_text`);
+    - **final** (accept-all) = the segments whose `change` is not ``"delete"``;
     - **original** (reject-all) = those whose `change` is not ``"insert"``.
 
     Offsets are UTF-16 code units; outside the Basic Multilingual Plane they
@@ -131,26 +151,30 @@ def segment_runs(
         else:
             segments.append({"text": text, "change": change})
 
+    with_deleted = _deletions_in_text(
+        text, base_start, [r for r in ordered if r.get("change") == "delete"]
+    )
     markup_cur = base_start  # position in the all-revisions-shown coordinate space
-    final_cur = 0  # index into final_text (deletions absent, insertions present)
+    text_cur = 0  # index into text
     for run in ordered:
         start, end = int(run["start"]), int(run["end"])
         if start < markup_cur:  # overlaps already-consumed space; skip defensively
             continue
         gap = start - markup_cur  # unchanged text before this revision
         if gap > 0:
-            emit(final_text[final_cur : final_cur + gap], None)
-            final_cur += gap
+            emit(text[text_cur : text_cur + gap], None)
+            text_cur += gap
             markup_cur += gap
         width = end - start
         if run.get("change") == "insert":
-            # Inserted text lives in final_text at the cursor.
-            emit(final_text[final_cur : final_cur + width], "insert")
-            final_cur += width
-        else:  # delete — text is gone from final_text; restore it from the run
+            emit(text[text_cur : text_cur + width], "insert")
+            text_cur += width
+        else:
             emit(_clean(run.get("text")), "delete")
+            if with_deleted:  # the deleted run also occupies `text`; step past it
+                text_cur += width
         markup_cur += width
-    emit(final_text[final_cur:], None)  # trailing unchanged text
+    emit(text[text_cur:], None)  # trailing unchanged text
     return segments
 
 

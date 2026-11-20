@@ -16,10 +16,10 @@ from office_mcp.word.wordcom.review._revisions import segment_runs
 
 # --- segment_runs (pure) -------------------------------------------------------
 #
-# `final_text` is the range's Range.Text (the FINAL view — inserted runs present,
-# deleted runs absent). Delete runs carry their text on the run itself, since the
-# deleted characters are gone from final_text. Offsets are markup-space, where the
-# deleted text still occupies positions (validated against live Word).
+# `text` is the range's Range.Text. Offsets are markup-space, where deleted text
+# still occupies positions. Live Word returns deleted runs inside Range.Text when
+# markup is shown (the default view) and drops them when it is hidden ("No
+# Markup"); segment_runs must give the same segments for both.
 
 
 def _ins(start, end, text):
@@ -68,6 +68,52 @@ def test_segment_runs_replace_interleaves_insert_and_deleted_text():
     original = "".join(s["text"] for s in segs if s["change"] != "insert")
     assert final == "the slow brown fox"
     assert original == "the quick brown fox"
+
+
+def _final(segs):
+    return "".join(s["text"] for s in segs if s["change"] != "delete")
+
+
+def _original(segs):
+    return "".join(s["text"] for s in segs if s["change"] != "insert")
+
+
+def test_segment_runs_markup_view_text_still_holds_deleted_run():
+    # Exactly what live Word returns for find_replace("quick" -> "slow") under
+    # the default All Markup view: Range.Text keeps "quick" next to "slow".
+    segs = segment_runs(
+        "the quickslow fox\r",
+        0,
+        [_del(4, 9, "quick"), _ins(9, 13, "slow")],
+    )
+    assert segs == [
+        {"text": "the ", "change": None},
+        {"text": "quick", "change": "delete"},
+        {"text": "slow", "change": "insert"},
+        {"text": " fox\r", "change": None},
+    ]
+    assert _final(segs) == "the slow fox\r"
+    assert _original(segs) == "the quick fox\r"
+
+
+def test_segment_runs_no_markup_view_matches_markup_view():
+    # Same edit, markup hidden: Range.Text drops "quick". Same segments.
+    runs = [_del(4, 9, "quick"), _ins(9, 13, "slow")]
+    assert segment_runs("the slow fox\r", 0, runs) == segment_runs("the quickslow fox\r", 0, runs)
+
+
+def test_segment_runs_markup_view_pure_delete_with_offset_base():
+    # Range starts at 100; "very " deleted in the middle, markup shown.
+    segs = segment_runs("a very big dog", 100, [_del(102, 107, "very ")])
+    assert _final(segs) == "a big dog"
+    assert _original(segs) == "a very big dog"
+
+
+def test_segment_runs_markup_view_deleted_paragraph_mark():
+    # A deleted run ending in a paragraph mark: the revision's text is cleaned,
+    # but the mark still occupies its markup position in Range.Text.
+    segs = segment_runs("one\rtwo\r", 0, [_del(0, 4, "one\r")])
+    assert _final(segs) == "two\r"
 
 
 def test_segment_runs_skips_runs_before_the_cursor():

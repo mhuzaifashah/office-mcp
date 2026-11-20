@@ -1151,17 +1151,17 @@ class Anchor(ABC):
 
         Returns `[{text, change}, …]` in document order, where `change` is
         ``"insert"``, ``"delete"``, or ``None`` (unchanged). Word's `text` read
-        shows the *final* view (inserted runs present, deleted runs gone); this
-        also surfaces the deleted runs, so you can see both sides of a tracked
-        edit. [`text_final`][wordcom.Anchor.text_final] and
+        depends on the window's markup view (deleted runs present when markup is
+        shown, gone when it is hidden); this labels every run either way, so you
+        can see both sides of a tracked edit. [`text_final`][wordcom.Anchor.text_final] and
         [`text_original`][wordcom.Anchor.text_original] are the two flattened
         views. The structured, whole-document counterpart is `doc.revisions`.
         """
         with _com.translate_com_errors():
             rng = self._range()
             start, end = int(rng.Start), int(rng.End)
-            final_text = range_text(rng)
-        return _revisions.segment_runs(final_text, start, self._revision_runs(start, end))
+            text = range_text(rng)
+        return _revisions.segment_runs(text, start, self._revision_runs(start, end))
 
     @property
     def text_final(self) -> str:
