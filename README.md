@@ -5,8 +5,8 @@ your Windows PC. It edits the document you have open right now, not a copy of
 the file. You watch the changes appear, and each change the agent makes is a
 single Ctrl+Z.
 
-Word is supported today. Excel is in preview (turn it on with
-`--apps word,excel`), and PowerPoint is next.
+Word is supported today. Excel and PowerPoint are in preview: turn them on
+with `--apps word,excel,ppt`.
 
 **What an agent can do in Word**
 
@@ -350,6 +350,19 @@ part-way through a batch, the cell values and formulas it overwrote are put
 back, but formatting and structural changes (new sheets, rows, tables, charts)
 stay. Save a copy first when the data matters.
 
+### PowerPoint (preview)
+
+Add `ppt` to `--apps` to get `ppt_read`, `ppt_exec`, `ppt_snapshot` and
+`ppt_write`. They work on the presentations open in PowerPoint: add and
+arrange slides, fill placeholders, write and format text, add shapes, pictures,
+tables, charts and connectors, and edit speaker notes. `ppt_snapshot` renders
+slides with each shape outlined and labelled with its id, which is how the
+agent finds what to edit. The ops are in `ppt_read(command="guide")`.
+
+Every op in a batch is checked before any runs (including that the slides and
+shapes it names exist). PowerPoint can't roll automation back, so if an op
+fails part-way, the ones before it stay and the error lists them.
+
 ## Configuration
 
 Every flag has an environment variable. A flag wins over its variable.
@@ -366,14 +379,15 @@ Directory lists in variables are separated by `;`.
 | `--snapshot-max-pages N` | | 10 | Most pages one snapshot call returns |
 | `--log-level LEVEL` | | `WARNING` | Log level for messages on stderr |
 | | `WORDCOM_CALL_TIMEOUT` | 300 | Seconds to wait for Word before a call fails as busy; `0` waits forever |
-| | `OFFICE_MCP_CALL_TIMEOUT` | 300 | The same for Excel |
+| | `OFFICE_MCP_CALL_TIMEOUT` | 300 | The same for Excel and PowerPoint |
 
 ## Safety
 
 - **Your documents stay yours.** The server edits the open document in place
   and never saves on its own. In Word every call is one undo step, so you can
   step back through what the agent did with Ctrl+Z. Excel has no undo for
-  automated edits; see [Excel (preview)](#excel-preview).
+  automated edits, and PowerPoint can't roll a failed batch back; see
+  [Excel (preview)](#excel-preview) and [PowerPoint (preview)](#powerpoint-preview).
 - **No file writes unless you allow a folder.** Saves and PDF exports outside
   `--save-dir` folders are refused.
 - **Local files only.** Network paths (`\\server\share`) and URLs are refused for

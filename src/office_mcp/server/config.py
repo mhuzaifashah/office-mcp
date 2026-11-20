@@ -9,7 +9,7 @@ APP_NAMES: tuple[str, ...] = ("word", "excel", "ppt")
 
 # Apps whose tools are implemented today. The others are accepted names that
 # fail with a clear "not available yet" message.
-IMPLEMENTED_APPS: tuple[str, ...] = ("word", "excel")
+IMPLEMENTED_APPS: tuple[str, ...] = ("word", "excel", "ppt")
 
 # Apps enabled when `--apps` isn't given. An app joins this list once it has
 # passed a live agent test; until then it is opt-in (`--apps word,excel`).

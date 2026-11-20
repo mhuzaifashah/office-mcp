@@ -19,6 +19,7 @@ __all__ = ["build_server", "load_toolset"]
 _TOOLSETS: dict[str, str] = {
     "word": "office_mcp.word.tools:WordToolset",
     "excel": "office_mcp.excel.tools:ExcelToolset",
+    "ppt": "office_mcp.ppt.tools:PptToolset",
 }
 
 _INTRO = (

@@ -26,14 +26,16 @@ HEADER = """\
 
 # Tool reference
 
-Every tool the server registers with all apps enabled (`--apps word,excel`;
-Excel is off by default for now). Tools marked **read-only** are the only ones
+Every tool the server registers with all apps enabled (`--apps word,excel,ppt`;
+Excel and PowerPoint are off by default for now). Tools marked **read-only** are the only ones
 left with `--read-only`.
 
 The edit ops behind `word_exec` and the anchor ids Word tools use are
 documented in the Word guide (`word_read(command="guide")`, or the
 `office-mcp://word/guide` resource). The ops behind `excel_exec` are in the
-Excel guide (`excel_read(command="guide")`, or `office-mcp://excel/guide`).
+Excel guide (`excel_read(command="guide")`, or `office-mcp://excel/guide`), and
+the ops behind `ppt_exec` in the PowerPoint guide (`ppt_read(command="guide")`,
+or `office-mcp://ppt/guide`).
 """
 
 

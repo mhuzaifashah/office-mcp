@@ -71,9 +71,8 @@ def test_unknown_app_is_rejected():
         _config(["--apps", "outlook"])
 
 
-def test_planned_app_says_not_available_yet():
-    with pytest.raises(ValueError, match="not available yet: ppt"):
-        _config(["--apps", "word,ppt"])
+def test_every_app_can_be_enabled():
+    assert _config(["--apps", "word,excel,ppt"]).apps == ("word", "excel", "ppt")
 
 
 def test_version_flag(capsys):

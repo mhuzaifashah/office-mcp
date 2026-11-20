@@ -2,14 +2,16 @@
 
 # Tool reference
 
-Every tool the server registers with all apps enabled (`--apps word,excel`;
-Excel is off by default for now). Tools marked **read-only** are the only ones
+Every tool the server registers with all apps enabled (`--apps word,excel,ppt`;
+Excel and PowerPoint are off by default for now). Tools marked **read-only** are the only ones
 left with `--read-only`.
 
 The edit ops behind `word_exec` and the anchor ids Word tools use are
 documented in the Word guide (`word_read(command="guide")`, or the
 `office-mcp://word/guide` resource). The ops behind `excel_exec` are in the
-Excel guide (`excel_read(command="guide")`, or `office-mcp://excel/guide`).
+Excel guide (`excel_read(command="guide")`, or `office-mcp://excel/guide`), and
+the ops behind `ppt_exec` in the PowerPoint guide (`ppt_read(command="guide")`,
+or `office-mcp://ppt/guide`).
 
 ## Word
 
@@ -216,3 +218,79 @@ Writing only works inside the folders the server was configured to allow; otherw
 | `overwrite` | boolean | no | Replace an existing file (save_as, export_pdf). |
 | `sheet` | string | no | Export only this sheet (export_pdf). |
 | `workbook` | string | no | Workbook file name from excel_read(command="status"); omit for the active one. |
+
+## PowerPoint
+
+### `ppt_read`
+
+**Read PowerPoint presentation** (read-only)
+
+Read the PowerPoint presentations open on this PC. Never changes them.
+
+Start with status (open presentations, slide size, current slide), then slides.
+
+Commands, with the fields they take:
+- Orient: status, slides, layouts
+- A slide: slide (slide) lists its shapes with ids, positions and text; text (slide, or every slide); notes (slide)
+- A shape: runs (slide, shape) text with font settings; table (slide, shape); link (slide, shape, paragraph)
+- guide: addressing and every ppt_exec op. Read it once before your first edit.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | `guide` \| `status` \| `slides` \| `slide` \| `text` \| `runs` \| `notes` \| `layouts` \| `table` \| `link` | yes | What to read. |
+| `slide` | integer | no | Slide number (slide, text, runs, notes, table, link). |
+| `shape` | integer | no | Shape id from the slide read (runs, table, link). |
+| `paragraph` | integer | no | Paragraph number in the shape (link). |
+| `presentation` | string | no | Presentation file name from ppt_read(command="status"); omit for the active one. |
+
+### `ppt_exec`
+
+**Edit PowerPoint presentation** (changes documents or files)
+
+Edit the PowerPoint presentation: apply a list of ops in order.
+
+Each op is {"op": "<name>", ...fields}, addressed by slide number and shape id (from ppt_read slide, or the ppt_snapshot labels). Every op is checked before any runs. PowerPoint can't roll back automation, so if an op fails part-way the ops before it stay applied; the error lists them in `applied`.
+
+Common ops: add_slide, set_placeholder, set_text, format_text, format_paragraph, add_text_box, add_shape, fill, move_shape, add_picture, add_table, set_cell, add_chart, set_notes, delete_shape.
+The full op list with fields is in ppt_read(command="guide").
+
+Example: {"ops": [{"op": "add_slide", "layout": "title_only"}, {"op": "set_placeholder", "slide": 2, "placeholder": "title", "text": "Q2 results"}]}
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ops` | object[] | yes | Ops to apply in order. Each is {"op": "<name>", ...fields}; see ppt_read(command="guide"). |
+| `presentation` | string | no | Presentation file name from ppt_read(command="status"); omit for the active one. |
+
+### `ppt_snapshot`
+
+**Render PowerPoint slides** (read-only)
+
+Render slides as PNG images. By default each shape is outlined and labelled with its id, so you can find what to edit; shape_ids=false shows the clean slide. Never changes the presentation. Images cost tokens: render only the slides you need.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `slides` | string | no | One slide ("4") or a range ("2-5"). Omit for every slide. |
+| `shape_ids` | boolean | no | Outline each shape and label it with its id. |
+| `max_dim` | integer | no | Long edge in pixels (default: the server's --snapshot-max-dim). |
+| `presentation` | string | no | Presentation file name from ppt_read(command="status"); omit for the active one. |
+
+### `ppt_write`
+
+**Open, save or export a PowerPoint presentation** (changes documents or files)
+
+Open, create, save or export a PowerPoint presentation.
+
+- open (path): open a local presentation (starts PowerPoint if needed).
+- new: a new presentation with a title slide.
+- save: save to its current file.
+- save_as (path, overwrite): save as .pptx or .pptm.
+- export_pdf (path, overwrite): a PDF copy.
+
+Writing only works inside the folders the server was configured to allow; otherwise it fails with path_not_allowed. Edits go through ppt_exec, not this tool.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | `open` \| `new` \| `save` \| `save_as` \| `export_pdf` | yes | What to do. |
+| `path` | string | no | Local file path: the presentation to open (open), or the target file (save_as, export_pdf). |
+| `overwrite` | boolean | no | Replace an existing file (save_as, export_pdf). |
+| `presentation` | string | no | Presentation file name from ppt_read(command="status"); omit for the active one. |

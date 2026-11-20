@@ -113,19 +113,32 @@ class ChartMixin:
                 for r_idx, v in enumerate(vals, start=2):
                     ws.Cells(r_idx, c_idx).Value = v
 
-            # Rebind source range so the chart picks up exact data extent
+            # Shrink the sample data's table to the new data, then point the
+            # chart at it. SetSourceData takes an address string here; a Range
+            # object fails silently and the chart keeps the sample's 4x3 shape.
+            last = f"${_col_letter(n_series + 1)}${n_cats + 1}"
             try:
-                chart.SetSourceData(
-                    Source=ws.Range(f"A1:{_col_letter(n_series + 1)}{n_cats + 1}"),
-                )
+                if ws.ListObjects.Count >= 1:
+                    ws.ListObjects(1).Resize(ws.Range(f"$A$1:{last}"))
+            except pywintypes.com_error:
+                pass
+            try:
+                # PlotBy=xlColumns: series are columns B.., categories rows 2..
+                # (left to guess, a square block plots the other way round).
+                chart.SetSourceData(f"='{ws.Name}'!$A$1:{last}", 2)
             except pywintypes.com_error:
                 pass  # Best-effort; some chart types reject explicit source
             chart.Refresh()
         except pywintypes.com_error as e:
             raise PowerPointError(f"Write chart data failed: {e}")
         finally:
+            # Close the chart's workbook. Quit Excel only if nothing else is open
+            # in it: the chart data may have opened in the user's own Excel.
             try:
-                workbook.Application.Quit()
+                xl = workbook.Application
+                workbook.Close()
+                if int(xl.Workbooks.Count) == 0:
+                    xl.Quit()
             except Exception:
                 pass
 
@@ -162,12 +175,15 @@ class ChartMixin:
         if categories is not None and series is not None:
             self._write_chart_data(shape.Chart, categories, series)
 
-        if title is not None:
-            try:
+        try:
+            if title is not None:
                 shape.Chart.HasTitle = True
                 shape.Chart.ChartTitle.Text = title
-            except pywintypes.com_error as e:
-                raise PowerPointError(f"Set chart title failed: {e}")
+            else:
+                # The new layout shows a "Chart Title" placeholder; drop it.
+                shape.Chart.HasTitle = False
+        except pywintypes.com_error as e:
+            raise PowerPointError(f"Set chart title failed: {e}")
 
         return {
             "success": True,
