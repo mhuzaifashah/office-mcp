@@ -19,6 +19,72 @@ _WORD_APP_CLSID = "{000209FF-0000-0000-C000-000000000046}"
 _WORD_DOC_SUFFIXES = (".docx", ".doc", ".docm", ".dotx", ".dotm", ".dot", ".rtf")
 
 
+def install_dispatch_type_cache(dynamic: Any = None) -> bool:
+    """Make pywin32 describe each COM type once per process instead of once per object.
+
+    pywin32's late-bound wrapper starts every new COM object (each Range,
+    Paragraph, Font, …) with an empty description of its type. Each attribute
+    the code touches is then looked up in Word's type library and each method
+    is compiled to Python, again for every object. On a formatting op that is
+    about half the time spent. Objects of one interface share a layout, so this
+    keeps one description (and one set of compiled methods) per interface ID.
+
+    Only the late-bound path changes; early-bound (gen_py) wrappers are left
+    alone. Safe to call more than once. Returns False when pywin32 is missing or
+    its internals don't look as expected, leaving pywin32 untouched. `dynamic`
+    is pywin32's `win32com.client.dynamic` module (a stand-in in tests).
+    """
+    if dynamic is None:
+        try:
+            from win32com.client import dynamic  # type: ignore[import-not-found]
+        except ImportError:
+            return False
+    if getattr(dynamic, "_wordcom_type_cache", False):
+        return True
+    make_ole_repr = getattr(dynamic, "MakeOleRepr", None)
+    cdispatch = getattr(dynamic, "CDispatch", None)
+    if make_ole_repr is None or cdispatch is None:
+        return False
+
+    shared: dict[Any, Any] = {}
+
+    lazy_item = getattr(getattr(dynamic, "build", None), "LazyDispatchItem", None)
+
+    def cached_make_ole_repr(IDispatch: Any, typeinfo: Any, typecomp: Any) -> Any:
+        # Only lazily-filled descriptions are shared; one built in full up
+        # front, or an empty one (no type info), stays per object as before.
+        if typeinfo is None or typecomp is None or lazy_item is None:
+            return make_ole_repr(IDispatch, typeinfo, typecomp)
+        try:
+            iid = typeinfo.GetTypeAttr()[0]
+        except Exception:  # noqa: BLE001 - let pywin32 handle the odd type
+            return make_ole_repr(IDispatch, typeinfo, typecomp)
+        known = shared.get(iid)
+        if known is None:
+            known = make_ole_repr(IDispatch, typeinfo, typecomp)
+            if not isinstance(known, lazy_item):
+                return known
+            known._wordcom_methods = {}
+            shared[iid] = known
+        return known
+
+    original_init = cdispatch.__init__
+
+    def init(self: Any, IDispatch: Any, olerepr: Any, *args: Any, **kwargs: Any) -> None:
+        original_init(self, IDispatch, olerepr, *args, **kwargs)
+        methods = getattr(olerepr, "_wordcom_methods", None)
+        if methods is not None:
+            self.__dict__["_builtMethods_"] = methods
+
+    dynamic.MakeOleRepr = cached_make_ole_repr
+    cdispatch.__init__ = init
+    dynamic._wordcom_type_cache = True
+    return True
+
+
+install_dispatch_type_cache()
+
+
 @contextmanager
 def com_apartment() -> Iterator[None]:
     """STA apartment lifecycle. Nests safely via pythoncom's reference counting."""

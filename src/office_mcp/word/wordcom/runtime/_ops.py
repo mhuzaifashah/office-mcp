@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..content._images import _decode_base64
 from ..exceptions import AmbiguousMatchError, OpError, WordcomError
+from ..model import _para_index
 from . import _com
 
 if TYPE_CHECKING:
@@ -1289,6 +1290,32 @@ def apply_op(doc: Document, op: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+# Ops that change formatting only: they never add or remove paragraphs, so the
+# paragraph lookups a batch has cached stay valid across them (see
+# `_para_index.batch_cache`). Every other op clears the cache after it runs.
+_PARAGRAPH_NEUTRAL_OPS: frozenset[str] = frozenset(
+    {
+        "apply_style",
+        "format_paragraph",
+        "format_run",
+        "set_shading",
+        "set_borders",
+        "add_tab_stop",
+        "set_style",
+        "set_table_style",
+        "set_table_alignment",
+        "set_table_borders",
+        "set_table_banding",
+        "apply_list",
+        "apply_list_format",
+        "remove_list",
+        "restart_numbering",
+        "indent_list",
+        "outdent_list",
+    }
+)
+
+
 def run_batch(
     doc: Document,
     ops: list[dict[str, Any]],
@@ -1322,11 +1349,13 @@ def run_batch(
     failure_exc: WordcomError | None = None
     failure_meta: dict[str, Any] | None = None
     tracking = doc.tracked_changes() if tracked else nullcontext()
-    with tracking, doc.edit(label) as scope:
+    with tracking, doc.edit(label) as scope, _para_index.batch_cache(doc.com):
         for i, op in enumerate(ops):
             try:
                 try:
                     out = apply_op(doc, _resolve_op_refs(op, results_by_index))
+                    if op.get("op") not in _PARAGRAPH_NEUTRAL_OPS:
+                        _para_index.forget_cached()
                 except (ValueError, TypeError) as exc:
                     # Bad input surfaced by a conversion or a validator (`int("x")`,
                     # an unknown alignment name). Report it like any other bad op so

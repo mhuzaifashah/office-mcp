@@ -21,14 +21,18 @@ something other than a bool), heading lookups walk the paragraphs instead.
 
 from __future__ import annotations
 
+import contextvars
 import re
 from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from ..constants import WdCollapseDirection
 
 __all__ = [
     "Locator",
+    "batch_cache",
+    "forget_cached",
     "count",
     "headings",
     "index_at",
@@ -52,14 +56,84 @@ def count(doc_com: Any) -> int:
     return int(doc_com.Paragraphs.Count)
 
 
+class _BatchCache:
+    """Paragraphs already looked up during one exec batch, by index.
+
+    `Paragraphs(n)` walks from the top of the document: about 150 ms for
+    paragraph 1,900 of a 60-page document. Stepping from a paragraph already in
+    hand (`Next(k)` / `Previous(k)`) costs about 10 ms, so a batch of edits
+    spread over a long document resolves each target from the nearest one it
+    has already seen. A cached paragraph object follows its paragraph through
+    edits, but its index shifts when paragraphs are added or removed before it,
+    so the batch drops the cache after any op that may add or remove paragraphs
+    (see `forget_cached`). It does not re-check `Paragraphs.Count`: after an
+    edit that call alone costs about 150 ms on a long document.
+    """
+
+    def __init__(self, doc_com: Any) -> None:
+        self.doc = doc_com
+        self.entries: dict[int, Any] = {}
+
+
+_batch: contextvars.ContextVar[_BatchCache | None] = contextvars.ContextVar(
+    "wordcom_para_batch", default=None
+)
+
+
+@contextmanager
+def batch_cache(doc_com: Any) -> Iterator[None]:
+    """Reuse paragraph lookups on `doc_com` for the duration of the block."""
+    token = _batch.set(_BatchCache(doc_com))
+    try:
+        yield
+    finally:
+        _batch.reset(token)
+
+
+def forget_cached() -> None:
+    """Drop the current batch's cached paragraphs (after an op that may add or remove some)."""
+    cache = _batch.get()
+    if cache is not None:
+        cache.entries.clear()
+
+
+def _from_cache(cache: _BatchCache, index: int) -> Any | None:
+    """Paragraph `index` via the nearest cached paragraph, or None to look it up directly."""
+    hit = cache.entries.get(index)
+    if hit is not None:
+        return hit
+    if not cache.entries:
+        return None
+    near = min(cache.entries, key=lambda k: abs(k - index))
+    distance = index - near
+    # A step costs far less than a walk from the top, but a long step is a walk
+    # too: only step when the cached paragraph is closer than the top is.
+    if abs(distance) >= index:
+        return None
+    base = cache.entries[near]
+    try:
+        para = base.Next(distance) if distance > 0 else base.Previous(-distance)
+    except Exception:  # noqa: BLE001 - fall back to the direct lookup
+        return None
+    return para
+
+
 def paragraph(doc_com: Any, index: int) -> Any | None:
     """Paragraph `index` (1-based), or None when there is no such paragraph."""
     if index < 1:
         return None
-    try:
-        return doc_com.Paragraphs(index)
-    except Exception:  # noqa: BLE001 - Word raises a COM error past the last paragraph
-        return None
+    cache = _batch.get()
+    if cache is not None and cache.doc is not doc_com:
+        cache = None
+    para = _from_cache(cache, index) if cache is not None else None
+    if para is None:
+        try:
+            para = doc_com.Paragraphs(index)
+        except Exception:  # noqa: BLE001 - Word raises a COM error past the last paragraph
+            return None
+    if cache is not None and para is not None:
+        cache.entries[index] = para
+    return para
 
 
 def index_at(doc_com: Any, pos: int) -> int:

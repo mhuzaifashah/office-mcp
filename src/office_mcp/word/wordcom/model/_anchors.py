@@ -3541,7 +3541,36 @@ class EndAnchor(Anchor):
 # ---------------------------------------------------------------------------
 
 
-class Paragraph(Anchor):
+class _IndexedTextName:
+    """`name` for an anchor located by paragraph index: the paragraph's text, read on demand.
+
+    Resolving the anchor used to read the paragraph's whole text every time just
+    to keep `name` informative, which cost about 15 ms per op on a long document.
+    `name` is now read only when something asks for it (repr, error messages).
+    Subclasses set `_name_index` (the 1-based paragraph index).
+    """
+
+    _name_index: int = 0
+    _fallback_name: str = ""
+
+    @property
+    def name(self) -> str:
+        doc = getattr(self, "_doc", None)
+        if doc is not None and self._name_index:
+            try:
+                para = _para_index.paragraph(doc.com, self._name_index)
+                if para is not None:
+                    return paragraph_text(para) or self._fallback_name
+            except Exception:  # noqa: BLE001 - a display name must never raise
+                pass
+        return self._fallback_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._fallback_name = value
+
+
+class Paragraph(_IndexedTextName, Anchor):
     """A paragraph located by 1-based index over `doc.Paragraphs`.
 
     `para:N` addresses *any* paragraph — body text, headings, list items alike.
@@ -3554,6 +3583,7 @@ class Paragraph(Anchor):
     kind = "paragraph"
 
     def __init__(self, doc: Document, index: int) -> None:
+        self._name_index = index
         super().__init__(doc, name=f"para:{index}")
         self._index = index
 
@@ -3568,8 +3598,6 @@ class Paragraph(Anchor):
     def _paragraph(self) -> Any:
         para = _para_index.paragraph(self._doc.com, self._index)
         if para is not None:
-            # Keep .name informative for repr / error messages.
-            self.name = paragraph_text(para) or self.name
             return para
         raise AnchorNotFoundError(
             "paragraph",
@@ -5340,15 +5368,15 @@ class HeadingCollection:
             yield _IndexedHeading(self._doc, idx)
 
 
-class _IndexedHeading(Heading):
+class _IndexedHeading(_IndexedTextName, Heading):
     """A Heading located by 1-based paragraph index — used by anchor_by_id('heading:N').
 
-    Disambiguates duplicate heading text. The display name is set to the resolved
-    heading text the first time `_paragraph()` succeeds so error messages and
-    `.name` reads stay informative.
+    Disambiguates duplicate heading text. `.name` reads the heading's current
+    text on demand (see `_IndexedTextName`).
     """
 
     def __init__(self, doc: Document, paragraph_index: int) -> None:
+        self._name_index = paragraph_index
         super().__init__(doc, name=f"heading:{paragraph_index}")
         self._paragraph_index = paragraph_index
 
@@ -5364,7 +5392,6 @@ class _IndexedHeading(Heading):
             except Exception:
                 level = 10
             if level < 10:
-                self.name = paragraph_text(para) or self.name
                 return para
         raise AnchorNotFoundError(
             "heading",

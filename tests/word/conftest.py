@@ -156,7 +156,17 @@ class _FakeParagraphs:
             style_name = p.get("style", "Normal")
             mock.Range.Style.NameLocal = style_name
             mock.Range.ParagraphStyle.NameLocal = style_name
+            # Paragraph.Next(k) / Previous(k): the paragraph k steps away, None
+            # past either end, as in Word (used by the batch paragraph cache).
+            mock.Next.side_effect = lambda k=1, m=mock: self._step(m, int(k))
+            mock.Previous.side_effect = lambda k=1, m=mock: self._step(m, -int(k))
             self._items.append(mock)
+
+    def _step(self, mock: Any, k: int) -> Any:
+        i = next((n for n, item in enumerate(self._items) if item is mock), None)
+        if i is None or not 0 <= i + k < len(self._items):
+            return None
+        return self._items[i + k]
 
     def __iter__(self) -> Iterable[Any]:
         return iter(self._items)
