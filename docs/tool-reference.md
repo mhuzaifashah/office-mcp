@@ -2,12 +2,14 @@
 
 # Tool reference
 
-Every tool the server registers with all apps enabled. Tools marked
-**read-only** are the only ones left with `--read-only`.
+Every tool the server registers with all apps enabled (`--apps word,excel`;
+Excel is off by default for now). Tools marked **read-only** are the only ones
+left with `--read-only`.
 
-The edit ops behind `word_exec` and the anchor ids every tool uses are
+The edit ops behind `word_exec` and the anchor ids Word tools use are
 documented in the Word guide (`word_read(command="guide")`, or the
-`office-mcp://word/guide` resource).
+`office-mcp://word/guide` resource). The ops behind `excel_exec` are in the
+Excel guide (`excel_read(command="guide")`, or `office-mcp://excel/guide`).
 
 ## Word
 
@@ -126,3 +128,91 @@ Saving and exporting only write inside the folders the server was configured to 
 | `to_page` | integer | no | Last page to export (export_pdf). |
 | `on` | boolean | no | Turn Track Changes on or off (track). |
 | `doc` | string | no | Document name from word_read(command="status"); omit for the active one. |
+
+## Excel
+
+### `excel_read`
+
+**Read Excel workbook** (read-only)
+
+Read the Excel workbooks open on this PC. Never changes them.
+
+Start with status (open workbooks, active sheet, selection), then sheets or used_range.
+
+Commands, with the fields they take:
+- Orient: status, sheets, used_range (sheet)
+- Cells: read (sheet, range, formulas) returns rows of values, at most 20,000 cells; find (text, sheet, range, match_case, whole_cell, limit) every matching cell; summary (sheet, range) count/sum/min/max/average/median
+- Objects: tables, table_data (table, visible_only), charts, pivots, pivot_fields (pivot), names, calc_mode
+- guide: addressing and every excel_exec op. Read it once before your first edit.
+
+Large results are truncated with a note saying how to narrow the request.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | `guide` \| `status` \| `sheets` \| `used_range` \| `read` \| `find` \| `summary` \| `tables` \| `table_data` \| `charts` \| `pivots` \| `pivot_fields` \| `names` \| `calc_mode` | yes | What to read. |
+| `workbook` | string | no | Workbook file name from excel_read(command="status"); omit for the active one. |
+| `sheet` | string | no | Sheet name; omit for the active sheet. |
+| `range` | string | no | A1 address or defined name (read, summary, find). |
+| `formulas` | boolean | no | Also return the formulas (read). |
+| `text` | string | no | Text to look for (find). |
+| `match_case` | boolean | no | Case-sensitive (find). |
+| `whole_cell` | boolean | no | Match the whole cell, not part of it (find). |
+| `limit` | integer | no | Most matches, default 50 (find). |
+| `table` | string | no | Table name (table_data). |
+| `visible_only` | boolean | no | Only rows a filter leaves visible (table_data). |
+| `pivot` | string | no | Pivot table name (pivot_fields). |
+
+### `excel_exec`
+
+**Edit Excel workbook** (changes documents or files)
+
+Edit the Excel workbook: apply a list of ops in order.
+
+Each op is {"op": "<name>", ...fields}, addressed by sheet (default: active) and range (A1 address). Every op is checked before any runs. Excel can't undo automated edits (Ctrl+Z won't work), so if an op fails part-way the cell contents earlier ops overwrote are written back; formatting and structural changes are not, and the error lists them in not_rolled_back.
+
+Common ops: write, fill_formula, clear, format, sort, autofit, insert_rows, add_sheet, create_table, create_chart, create_pivot, pivot_add_field, cond_format.
+The full op list with required fields is in excel_read(command="guide").
+
+Example: {"ops": [{"op": "write", "range": "A1", "values": [["Item", "Cost"], ["Pens", 4]]}, {"op": "format", "range": "A1:B1", "bold": true}]}
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ops` | object[] | yes | Ops to apply in order. Each is {"op": "<name>", ...fields}; see excel_read(command="guide"). |
+| `workbook` | string | no | Workbook file name from excel_read(command="status"); omit for the active one. |
+
+### `excel_snapshot`
+
+**Render Excel range** (read-only)
+
+Render a range of the Excel workbook as PNG images, the way it would print, with row numbers and column letters. Default: the active sheet's used range. Use it to check layout, formatting and charts. Never changes the workbook (page setup is restored).
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sheet` | string | no | Sheet name; omit for the active sheet. |
+| `range` | string | no | A1 address to render; omit for the sheet's used range. |
+| `headings` | boolean | no | Show row numbers and column letters. |
+| `dpi` | integer | no | Render resolution. |
+| `max_dim` | integer | no | Cap on each page's long edge in pixels (default: the server's --snapshot-max-dim). |
+| `workbook` | string | no | Workbook file name from excel_read(command="status"); omit for the active one. |
+
+### `excel_write`
+
+**Open, save or export an Excel workbook** (changes documents or files)
+
+Open, create, save or export an Excel workbook.
+
+- open (path): open a local workbook (starts Excel if needed); activates it if already open.
+- new: a new blank workbook.
+- save: save the workbook to its current file.
+- save_as (path, overwrite): save as .xlsx, .xlsm or .xlsb.
+- export_pdf (path, sheet, overwrite): a PDF of the workbook or one sheet.
+
+Writing only works inside the folders the server was configured to allow; otherwise it fails with path_not_allowed. Edits go through excel_exec, not this tool.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | `open` \| `new` \| `save` \| `save_as` \| `export_pdf` | yes | What to do. |
+| `path` | string | no | Local file path: the workbook to open (open), or the target file (save_as, export_pdf). |
+| `overwrite` | boolean | no | Replace an existing file (save_as, export_pdf). |
+| `sheet` | string | no | Export only this sheet (export_pdf). |
+| `workbook` | string | no | Workbook file name from excel_read(command="status"); omit for the active one. |

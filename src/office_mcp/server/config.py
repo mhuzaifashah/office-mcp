@@ -9,7 +9,11 @@ APP_NAMES: tuple[str, ...] = ("word", "excel", "ppt")
 
 # Apps whose tools are implemented today. The others are accepted names that
 # fail with a clear "not available yet" message.
-IMPLEMENTED_APPS: tuple[str, ...] = ("word",)
+IMPLEMENTED_APPS: tuple[str, ...] = ("word", "excel")
+
+# Apps enabled when `--apps` isn't given. An app joins this list once it has
+# passed a live agent test; until then it is opt-in (`--apps word,excel`).
+DEFAULT_APPS: tuple[str, ...] = ("word",)
 
 # Claude Code cuts tool output at about 25,000 tokens (MAX_MCP_OUTPUT_TOKENS)
 # and warns above 10,000. 60,000 characters is roughly 15,000 tokens of JSON,
@@ -42,7 +46,7 @@ class ServerConfig:
         snapshot_max_pages: Most pages one snapshot call returns.
     """
 
-    apps: tuple[str, ...] = IMPLEMENTED_APPS
+    apps: tuple[str, ...] = DEFAULT_APPS
     read_only: bool = False
     save_dirs: tuple[str, ...] = ()
     image_dirs: tuple[str, ...] = ()

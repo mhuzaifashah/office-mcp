@@ -18,6 +18,7 @@ __all__ = ["build_server", "load_toolset"]
 # Word-only server never imports the Excel or PowerPoint code.
 _TOOLSETS: dict[str, str] = {
     "word": "office_mcp.word.tools:WordToolset",
+    "excel": "office_mcp.excel.tools:ExcelToolset",
 }
 
 _INTRO = (

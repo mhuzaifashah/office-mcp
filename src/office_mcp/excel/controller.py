@@ -1492,7 +1492,25 @@ class ExcelController:
                     "position": pf.Position if pf.Orientation != 0 else None,
                 }
             )
-        return {"fields": fields}
+        # A field summed in the Values area keeps Orientation 0 on its source
+        # field; the summary lives in DataFields ("Sum of Q1").
+        values = []
+        functions = {v: k for k, v in AGGREGATION_MAP.items()}
+        data_fields = pt.DataFields
+        for i in range(1, int(data_fields.Count) + 1):
+            df = data_fields.Item(i)
+            source = str(df.SourceName)
+            values.append(
+                {
+                    "name": df.Name,
+                    "source": source,
+                    "function": functions.get(df.Function, df.Function),
+                }
+            )
+            for f in fields:
+                if f["name"] == source and f["area"] == "hidden":
+                    f["area"] = "value"
+        return {"fields": fields, "values": values}
 
     def pivot_refresh(self, pivot_name: str) -> dict:
         """Refresh a PivotTable."""

@@ -5,8 +5,8 @@ your Windows PC. It edits the document you have open right now, not a copy of
 the file. You watch the changes appear, and each change the agent makes is a
 single Ctrl+Z.
 
-Word is supported today. Excel and PowerPoint are next and will join the same
-server.
+Word is supported today. Excel is in preview (turn it on with
+`--apps word,excel`), and PowerPoint is next.
 
 **What an agent can do in Word**
 
@@ -335,6 +335,21 @@ Agents learn the ops from the built-in guide: `word_read(command="guide")`,
 also served as the `office-mcp://word/guide` resource. All parameters are in
 the [tool reference](https://github.com/mhuzaifashah/office-mcp/blob/main/docs/tool-reference.md).
 
+### Excel (preview)
+
+Add `excel` to `--apps` (for example `"args": ["office-mcp", "--apps", "word,excel"]`)
+to get `excel_read`, `excel_exec`, `excel_snapshot` and `excel_write`. They work
+on the workbooks open in Excel: read and find cells, write values and formulas,
+format, sort, and build tables, charts, pivot tables and conditional formats.
+`excel_snapshot` renders a range with its row numbers and column letters, so
+the agent can check its work. The ops are in `excel_read(command="guide")`.
+
+Excel can't undo changes made by automation: Ctrl+Z won't step back through
+the agent's edits, and they clear Excel's undo history. If an edit fails
+part-way through a batch, the cell values and formulas it overwrote are put
+back, but formatting and structural changes (new sheets, rows, tables, charts)
+stay. Save a copy first when the data matters.
+
 ## Configuration
 
 Every flag has an environment variable. A flag wins over its variable.
@@ -351,12 +366,14 @@ Directory lists in variables are separated by `;`.
 | `--snapshot-max-pages N` | | 10 | Most pages one snapshot call returns |
 | `--log-level LEVEL` | | `WARNING` | Log level for messages on stderr |
 | | `WORDCOM_CALL_TIMEOUT` | 300 | Seconds to wait for Word before a call fails as busy; `0` waits forever |
+| | `OFFICE_MCP_CALL_TIMEOUT` | 300 | The same for Excel |
 
 ## Safety
 
 - **Your documents stay yours.** The server edits the open document in place
-  and never saves on its own. Every call is one undo step, so you can step back
-  through what the agent did with Ctrl+Z.
+  and never saves on its own. In Word every call is one undo step, so you can
+  step back through what the agent did with Ctrl+Z. Excel has no undo for
+  automated edits; see [Excel (preview)](#excel-preview).
 - **No file writes unless you allow a folder.** Saves and PDF exports outside
   `--save-dir` folders are refused.
 - **Local files only.** Network paths (`\\server\share`) and URLs are refused for

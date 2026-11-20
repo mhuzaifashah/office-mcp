@@ -7,7 +7,7 @@ import os
 import pytest
 
 from office_mcp.server import cli
-from office_mcp.server.config import IMPLEMENTED_APPS, ServerConfig
+from office_mcp.server.config import DEFAULT_APPS, ServerConfig
 
 
 def _config(argv, env=None):
@@ -17,7 +17,7 @@ def _config(argv, env=None):
 def test_defaults():
     config = _config([])
     assert config == ServerConfig()
-    assert config.apps == IMPLEMENTED_APPS
+    assert config.apps == DEFAULT_APPS
     assert config.read_only is False
     assert config.save_dirs == ()
 
@@ -72,8 +72,8 @@ def test_unknown_app_is_rejected():
 
 
 def test_planned_app_says_not_available_yet():
-    with pytest.raises(ValueError, match="not available yet: excel"):
-        _config(["--apps", "word,excel"])
+    with pytest.raises(ValueError, match="not available yet: ppt"):
+        _config(["--apps", "word,ppt"])
 
 
 def test_version_flag(capsys):

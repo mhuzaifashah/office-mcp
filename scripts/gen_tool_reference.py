@@ -17,6 +17,7 @@ import anyio
 from mcp import Client
 
 from office_mcp.server import ServerConfig, build_server
+from office_mcp.server.config import IMPLEMENTED_APPS
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "tool-reference.md"
 
@@ -25,12 +26,14 @@ HEADER = """\
 
 # Tool reference
 
-Every tool the server registers with all apps enabled. Tools marked
-**read-only** are the only ones left with `--read-only`.
+Every tool the server registers with all apps enabled (`--apps word,excel`;
+Excel is off by default for now). Tools marked **read-only** are the only ones
+left with `--read-only`.
 
-The edit ops behind `word_exec` and the anchor ids every tool uses are
+The edit ops behind `word_exec` and the anchor ids Word tools use are
 documented in the Word guide (`word_read(command="guide")`, or the
-`office-mcp://word/guide` resource).
+`office-mcp://word/guide` resource). The ops behind `excel_exec` are in the
+Excel guide (`excel_read(command="guide")`, or `office-mcp://excel/guide`).
 """
 
 
@@ -68,7 +71,7 @@ def _tool_section(tool: Any) -> str:
 
 
 async def _tools() -> list[Any]:
-    async with Client(build_server(ServerConfig())) as client:
+    async with Client(build_server(ServerConfig(apps=IMPLEMENTED_APPS))) as client:
         return (await client.list_tools()).tools
 
 

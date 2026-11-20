@@ -16,10 +16,10 @@ from collections.abc import Mapping, Sequence
 from .. import __version__
 from .config import (
     APP_NAMES,
+    DEFAULT_APPS,
     DEFAULT_MAX_OUTPUT_CHARS,
     DEFAULT_SNAPSHOT_MAX_DIM,
     DEFAULT_SNAPSHOT_MAX_PAGES,
-    IMPLEMENTED_APPS,
     ServerConfig,
 )
 
@@ -46,7 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="LIST",
         help=(
             f"comma-separated apps to expose: {', '.join(APP_NAMES)} "
-            f"(default: {','.join(IMPLEMENTED_APPS)}; env {ENV_APPS})"
+            f"(default: {','.join(DEFAULT_APPS)}; env {ENV_APPS})"
         ),
     )
     parser.add_argument(
@@ -118,7 +118,7 @@ def config_from_args(
     apps = (
         tuple(a.strip().lower() for a in apps_raw.split(",") if a.strip())
         if apps_raw
-        else IMPLEMENTED_APPS
+        else DEFAULT_APPS
     )
 
     read_only = args.read_only
