@@ -452,8 +452,7 @@ dependencies = [
     { name = "mcp" },
     { name = "pillow" },
     { name = "pymupdf" },
-    { name = "pywin32" },
-    { name = "xlwings" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
 
 [package.optional-dependencies]
@@ -466,6 +465,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-mock" },
     { name = "ruff" },
+    { name = "xlwings" },
 ]
 
 [package.metadata]
@@ -474,8 +474,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=2.3,<3" },
     { name = "pillow", specifier = ">=11" },
     { name = "pymupdf", specifier = ">=1.24" },
-    { name = "pywin32", specifier = ">=311" },
-    { name = "xlwings", specifier = ">=0.33" },
+    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=311" },
 ]
 provides-extras = ["equations"]
 
@@ -484,6 +483,7 @@ dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-mock", specifier = ">=3.12" },
     { name = "ruff", specifier = ">=0.8" },
+    { name = "xlwings", specifier = ">=0.33" },
 ]
 
 [[package]]

@@ -3,23 +3,45 @@ name = "office-mcp"
 version = "0.1.0"
 description = "MCP servers for live Microsoft Office (Word, Excel, PowerPoint) control over COM"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["mcp", "model-context-protocol", "microsoft-word", "word", "office", "com", "automation", "ai-agents", "claude", "windows"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Office Suites",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 authors = [
     { name = "Muhammad Huzaifa", email = "151254717+mhuzaifashah@users.noreply.github.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "pywin32>=311",
+    "pywin32>=311; sys_platform == 'win32'",
     "pymupdf>=1.24",
     "pillow>=11",
-    "xlwings>=0.33",
     "mcp>=2.3,<3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mhuzaifashah/office-mcp"
+Repository = "https://github.com/mhuzaifashah/office-mcp"
+Documentation = "https://github.com/mhuzaifashah/office-mcp/blob/main/docs/tool-reference.md"
+Issues = "https://github.com/mhuzaifashah/office-mcp/issues"
 
 [project.optional-dependencies]
 equations = ["latex2mathml>=3.77"]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-mock>=3.12", "ruff>=0.8"]
+# xlwings backs the unreleased Excel/PowerPoint code; move it back into
+# [project] dependencies when those apps ship.
+dev = ["pytest>=8", "pytest-mock>=3.12", "ruff>=0.8", "xlwings>=0.33"]
 
 [project.scripts]
 office-mcp = "office_mcp:main"

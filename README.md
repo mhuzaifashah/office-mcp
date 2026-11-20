@@ -333,7 +333,7 @@ tool list stays short.
 
 Agents learn the ops from the built-in guide: `word_read(command="guide")`,
 also served as the `office-mcp://word/guide` resource. All parameters are in
-the [tool reference](docs/tool-reference.md).
+the [tool reference](https://github.com/mhuzaifashah/office-mcp/blob/main/docs/tool-reference.md).
 
 ## Configuration
 
@@ -390,5 +390,14 @@ uv run pytest -m smoke            # against a real running Word
 uv run python scripts/gen_tool_reference.py   # after changing a tool
 ```
 
-See [docs/design-principles.md](docs/design-principles.md) for how tools are
+See [docs/design-principles.md](https://github.com/mhuzaifashah/office-mcp/blob/main/docs/design-principles.md) for how tools are
 shaped and how to add an app.
+
+## License
+
+Office MCP is created by Muhammad Huzaifa and licensed under the
+[Apache License 2.0](https://github.com/mhuzaifashah/office-mcp/blob/main/LICENSE).
+You may use, change and redistribute it, including commercially. If you
+redistribute it or a modified version, keep the
+[NOTICE](https://github.com/mhuzaifashah/office-mcp/blob/main/NOTICE) file,
+which credits the author.
