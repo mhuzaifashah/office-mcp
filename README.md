@@ -36,7 +36,7 @@ Most MCP clients take this standard config:
   "mcpServers": {
     "office": {
       "command": "uvx",
-      "args": ["office-mcp", "--save-dir", "C:\\AI output"]
+      "args": ["msoffice-mcp", "--save-dir", "C:\\AI output"]
     }
   }
 }
@@ -47,7 +47,7 @@ write any file.
 
 The first start downloads the server and its dependencies, which can take
 15 to 30 seconds and trip a client's startup timeout. Run
-`uvx office-mcp --version` once in a terminal first, and later starts take
+`uvx msoffice-mcp --version` once in a terminal first, and later starts take
 about 2 seconds.
 
 Then open a document in Word and ask your agent, for example: *"Read the
@@ -73,7 +73,7 @@ menu has Copy Config File Path), with a longer tool timeout:
   "mcpServers": {
     "office": {
       "command": "uvx",
-      "args": ["office-mcp", "--save-dir", "C:\\AI output"],
+      "args": ["msoffice-mcp", "--save-dir", "C:\\AI output"],
       "timeoutSeconds": 300
     }
   }
@@ -89,7 +89,7 @@ file, so `word_snapshot` pages reach the model that way.
 <summary>Claude Code</summary>
 
 ```sh
-claude mcp add office --scope user -- uvx office-mcp --save-dir "C:\AI output"
+claude mcp add office --scope user -- uvx msoffice-mcp --save-dir "C:\AI output"
 ```
 
 No timeout changes are needed. Calls that run longer than two minutes move to
@@ -111,7 +111,7 @@ to `claude_desktop_config.json`. Restart Claude Desktop.
 From the Cline CLI:
 
 ```sh
-cline mcp add office --yes -- uvx office-mcp --save-dir "C:\AI output"
+cline mcp add office --yes -- uvx msoffice-mcp --save-dir "C:\AI output"
 ```
 
 Or in the extension open the MCP Servers view, choose Configure MCP Servers,
@@ -122,7 +122,7 @@ and add the standard config with a `timeout`:
   "mcpServers": {
     "office": {
       "command": "uvx",
-      "args": ["office-mcp", "--save-dir", "C:\\AI output"],
+      "args": ["msoffice-mcp", "--save-dir", "C:\\AI output"],
       "timeout": 300
     }
   }
@@ -138,7 +138,7 @@ Cline stops tool calls after 60 seconds and startup after 10.
 <summary>Codex (CLI, IDE extension, app)</summary>
 
 ```sh
-codex mcp add office -- uvx office-mcp --save-dir "C:\AI output"
+codex mcp add office -- uvx msoffice-mcp --save-dir "C:\AI output"
 ```
 
 Then raise the timeouts in `~/.codex/config.toml`
@@ -148,7 +148,7 @@ and the ChatGPT desktop app share this file.
 ```toml
 [mcp_servers.office]
 command = "uvx"
-args = ["office-mcp", "--save-dir", 'C:\AI output']
+args = ["msoffice-mcp", "--save-dir", 'C:\AI output']
 startup_timeout_sec = 60
 tool_timeout_sec = 300
 ```
@@ -170,7 +170,7 @@ Add the standard config to `%USERPROFILE%\.cursor\mcp.json`, or to
 <summary>Hermes Agent</summary>
 
 ```sh
-hermes mcp add office --command uvx --args office-mcp --save-dir "C:\AI output"
+hermes mcp add office --command uvx --args msoffice-mcp --save-dir "C:\AI output"
 ```
 
 `--args` takes everything after it, so keep it last. Or edit the config
@@ -180,7 +180,7 @@ hermes mcp add office --command uvx --args office-mcp --save-dir "C:\AI output"
 mcp_servers:
   office:
     command: uvx
-    args: [office-mcp, --save-dir, 'C:\AI output']
+    args: [msoffice-mcp, --save-dir, 'C:\AI output']
 ```
 
 The default tool timeout, 300 seconds, is enough. In WSL, see
@@ -192,7 +192,7 @@ The default tool timeout, 300 seconds, is enough. In WSL, see
 <summary>OpenClaw</summary>
 
 ```sh
-openclaw mcp add office --command uvx --arg office-mcp --arg --save-dir --arg "C:\AI output"
+openclaw mcp add office --command uvx --arg msoffice-mcp --arg --save-dir --arg "C:\AI output"
 ```
 
 Then set a longer request timeout (the default is 60 seconds) in
@@ -204,7 +204,7 @@ Then set a longer request timeout (the default is 60 seconds) in
     servers: {
       office: {
         command: "uvx",
-        args: ["office-mcp", "--save-dir", "C:\\AI output"],
+        args: ["msoffice-mcp", "--save-dir", "C:\\AI output"],
         requestTimeoutMs: 300000,
       },
     },
@@ -222,7 +222,7 @@ run the Gateway in your own session.
 <summary>OpenCode</summary>
 
 ```sh
-opencode mcp add office -- uvx office-mcp --save-dir "C:\AI output"
+opencode mcp add office -- uvx msoffice-mcp --save-dir "C:\AI output"
 ```
 
 Or add to `opencode.json` (global: `~/.config/opencode/opencode.json`):
@@ -233,7 +233,7 @@ Or add to `opencode.json` (global: `~/.config/opencode/opencode.json`):
   "mcp": {
     "office": {
       "type": "local",
-      "command": ["uvx", "office-mcp", "--save-dir", "C:\\AI output"],
+      "command": ["uvx", "msoffice-mcp", "--save-dir", "C:\\AI output"],
       "enabled": true,
       "timeout": 300000
     }
@@ -256,7 +256,7 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "office": {
       "command": "uvx",
-      "args": ["office-mcp", "--save-dir", "C:\\AI output"]
+      "args": ["msoffice-mcp", "--save-dir", "C:\\AI output"]
     }
   }
 }
@@ -272,7 +272,7 @@ Add to `.vscode/mcp.json`:
   "mcpServers": {
     "office": {
       "command": "uv",
-      "args": ["run", "--directory", "C:\\path\\to\\office-mcp", "office-mcp"]
+      "args": ["run", "--directory", "C:\\path\\to\\office-mcp", "msoffice-mcp"]
     }
   }
 }
@@ -289,8 +289,8 @@ The server must run on Windows, but an agent inside WSL can start it there.
 Use the Windows `uvx.exe` as the command, or go through `cmd.exe`:
 
 ```sh
-claude mcp add office --scope user -- uvx.exe office-mcp --save-dir "C:\AI output"
-hermes mcp add office --command cmd.exe --args /c uvx office-mcp --save-dir "C:\AI output"
+claude mcp add office --scope user -- uvx.exe msoffice-mcp --save-dir "C:\AI output"
+hermes mcp add office --command cmd.exe --args /c uvx msoffice-mcp --save-dir "C:\AI output"
 ```
 
 - `uvx.exe` is found when WSL adds the Windows PATH, which it does by default.
@@ -337,7 +337,7 @@ the [tool reference](https://github.com/mhuzaifashah/office-mcp/blob/main/docs/t
 
 ### Excel (preview)
 
-Add `excel` to `--apps` (for example `"args": ["office-mcp", "--apps", "word,excel"]`)
+Add `excel` to `--apps` (for example `"args": ["msoffice-mcp", "--apps", "word,excel"]`)
 to get `excel_read`, `excel_exec`, `excel_snapshot` and `excel_write`. They work
 on the workbooks open in Excel: read and find cells, write values and formulas,
 format, sort, and build tables, charts, pivot tables and conditional formats.
@@ -406,7 +406,7 @@ Directory lists in variables are separated by `;`.
 - **`path_not_allowed`** when saving: start the server with `--save-dir`.
 - **The server fails to start the first time**: the first start downloads the
   server and can outlast the client's startup timeout. Run
-  `uvx office-mcp --version` once, then restart the client.
+  `uvx msoffice-mcp --version` once, then restart the client.
 - **A long call fails with a timeout**: raise the client's tool timeout; see
   [Add it to your agent](#add-it-to-your-agent).
 - **Nothing happens in WSL**: Office automation needs the Windows build of the

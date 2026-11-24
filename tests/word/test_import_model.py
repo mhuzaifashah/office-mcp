@@ -37,4 +37,4 @@ def test_version_comes_from_the_distribution():
 
     from office_mcp.word import wordcom
 
-    assert wordcom.__version__ == version("office-mcp")
+    assert wordcom.__version__ == version("msoffice-mcp")

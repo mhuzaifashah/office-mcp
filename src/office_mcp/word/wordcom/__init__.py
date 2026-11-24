@@ -18,7 +18,7 @@ from importlib.metadata import version as _pkg_version
 from . import constants
 
 try:
-    __version__ = _pkg_version("office-mcp")
+    __version__ = _pkg_version("msoffice-mcp")
 except PackageNotFoundError:  # running from a source tree with no install metadata
     __version__ = "0.0.0+unknown"
 from .content._fields import Field, FieldCollection

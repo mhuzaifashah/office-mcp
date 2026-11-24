@@ -1,5 +1,5 @@
 [project]
-name = "office-mcp"
+name = "msoffice-mcp"
 version = "0.1.0"
 description = "MCP servers for live Microsoft Office (Word, Excel, PowerPoint) control over COM"
 readme = "README.md"
@@ -43,7 +43,7 @@ equations = ["latex2mathml>=3.77"]
 dev = ["pytest>=8", "pytest-mock>=3.12", "ruff>=0.8"]
 
 [project.scripts]
-office-mcp = "office_mcp:main"
+msoffice-mcp = "office_mcp:main"
 
 [build-system]
 requires = ["uv_build>=0.8.16,<0.9.0"]
@@ -69,3 +69,6 @@ select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.format]
 line-ending = "lf"
+
+[tool.uv.build-backend]
+module-name = "office_mcp"

@@ -1,4 +1,4 @@
-"""`office-mcp` command line: parse flags, then serve over stdio.
+"""`msoffice-mcp` command line: parse flags, then serve over stdio.
 
 Every flag has an environment-variable twin so MCP client configs can use
 either. A flag wins over its variable. Directory lists in variables are
@@ -35,7 +35,7 @@ _TRUE = {"1", "true", "yes", "on"}
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="office-mcp",
+        prog="msoffice-mcp",
         description=(
             "MCP server for live Microsoft Office (Word today; Excel and PowerPoint next). "
             "Talks MCP over stdio; add it to your MCP client rather than running it by hand."
@@ -153,8 +153,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     if sys.platform != "win32":
         parser.exit(
             2,
-            "office-mcp: Microsoft Office automation needs Windows. If you are in WSL, "
-            "configure your MCP client to start the Windows build of office-mcp.\n",
+            "msoffice-mcp: Microsoft Office automation needs Windows. If you are in WSL, "
+            "configure your MCP client to start the Windows build of msoffice-mcp.\n",
         )
 
     try:
