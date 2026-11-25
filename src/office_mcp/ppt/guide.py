@@ -44,9 +44,12 @@ Every call acts on the active presentation unless you pass `presentation`
 
 Each op is `{"op": "<name>", ...fields}`; required fields are in bold. Ops run
 in order. Before anything runs, every op is checked (name, fields, allowed
-values, and that the slides and shapes it names exist). PowerPoint can't roll
-automation back, so if an op fails part-way the ops before it stay applied:
-the error lists them in `applied`. Fix the failing op and send only the rest.
+values, and that the slides and shapes it names exist). The batch is one undo
+step in PowerPoint: if an op fails part-way, the whole batch is undone and the
+error says `rolled_back: true`; fix the op and send the batch again. If Undo
+can't run (the presentation has no window, or you switched to another one),
+the ops before the failure stay applied: the error lists them in `applied` and
+says why in `rollback_error`; then send only the failing op and the rest.
 Ops that add a shape return its `shape_id`; use it in later calls.
 """
 

@@ -57,8 +57,13 @@ _OP_HINT = (
     'ppt_read(command="slide", slide=N) lists shape ids.'
 )
 _BATCH_HINT = (
-    "Ops listed in `applied` already changed the presentation. Fix the failing op "
-    "(failure.index) and send it with the ops after it, not the whole batch again."
+    "Undo couldn't reverse the batch (see rollback_error), so the ops listed in `applied` "
+    "already changed the presentation. Fix the failing op (failure.index) and send it with "
+    "the ops after it, not the whole batch again."
+)
+_ROLLED_BACK_HINT = (
+    "The whole batch was undone; the presentation is as it was before the call. Fix the "
+    "failing op (failure.index) and send the batch again."
 )
 
 Presentation = Annotated[
@@ -76,7 +81,10 @@ def _error(exc: BaseException) -> CallToolResult:
         details = dict(getattr(exc, "details", None) or {})
         hint = _HINTS.get(code)
         if hint is None:
-            hint = _BATCH_HINT if details.get("applied") else _OP_HINT
+            if details.get("rolled_back") and details.get("ops_run"):
+                hint = _ROLLED_BACK_HINT
+            else:
+                hint = _BATCH_HINT if details.get("applied") else _OP_HINT
         return response.error_result(
             code, str(exc), retryable=retryable, hint=hint, details=details or None
         )
@@ -348,9 +356,10 @@ _EXEC_DESCRIPTION = """\
 Edit the PowerPoint presentation: apply a list of ops in order.
 
 Each op is {"op": "<name>", ...fields}, addressed by slide number and shape id \
-(from ppt_read slide, or the ppt_snapshot labels). Every op is checked before any runs. \
-PowerPoint can't roll back automation, so if an op fails part-way the ops before it stay \
-applied; the error lists them in `applied`.
+(from ppt_read slide, or the ppt_snapshot labels). Every op is checked before any runs, \
+and the batch is one undo step: if an op fails part-way, the whole batch is undone \
+(rolled_back=true). If Undo can't run (no window), the ops before it stay applied and the \
+error lists them in `applied`.
 
 Common ops: add_slide, set_placeholder, set_text, format_text, format_paragraph, \
 add_text_box, add_shape, fill, move_shape, add_picture, add_table, set_cell, add_chart, \

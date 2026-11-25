@@ -249,7 +249,7 @@ Commands, with the fields they take:
 
 Edit the PowerPoint presentation: apply a list of ops in order.
 
-Each op is {"op": "<name>", ...fields}, addressed by slide number and shape id (from ppt_read slide, or the ppt_snapshot labels). Every op is checked before any runs. PowerPoint can't roll back automation, so if an op fails part-way the ops before it stay applied; the error lists them in `applied`.
+Each op is {"op": "<name>", ...fields}, addressed by slide number and shape id (from ppt_read slide, or the ppt_snapshot labels). Every op is checked before any runs, and the batch is one undo step: if an op fails part-way, the whole batch is undone (rolled_back=true). If Undo can't run (no window), the ops before it stay applied and the error lists them in `applied`.
 
 Common ops: add_slide, set_placeholder, set_text, format_text, format_paragraph, add_text_box, add_shape, fill, move_shape, add_picture, add_table, set_cell, add_chart, set_notes, delete_shape.
 The full op list with fields is in ppt_read(command="guide").

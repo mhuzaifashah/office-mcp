@@ -38,8 +38,8 @@ class _Collection:
 
 def _deck(shapes_per_slide=((1, 2), (5,))):
     slides = [
-        SimpleNamespace(Shapes=_Collection([SimpleNamespace(Id=i) for i in ids]))
-        for ids in shapes_per_slide
+        SimpleNamespace(SlideID=256 + n, Shapes=_Collection([SimpleNamespace(Id=i) for i in ids]))
+        for n, ids in enumerate(shapes_per_slide)
     ]
     pres = SimpleNamespace(
         Slides=_Collection(slides),
@@ -69,6 +69,45 @@ def calls(monkeypatch):
     for spec in OPS.values():
         monkeypatch.setattr(PowerPointController, spec.method, recorder(spec.method))
     return seen
+
+
+class _Tags:
+    def __init__(self):
+        self.values: dict[str, str] = {}
+        self.log: list[tuple[str, str]] = []
+
+    def Add(self, name, value):
+        self.values[name] = value
+        self.log.append(("add", name))
+
+    def Delete(self, name):
+        self.values.pop(name, None)
+        self.log.append(("delete", name))
+
+    def __call__(self, name):
+        return self.values.get(name, "")
+
+
+def _undoable_deck(*, windows=1, active=True, undo_works=True):
+    """A deck whose PowerPoint supports undo entries; Undo drops the marker tag."""
+    pres = _deck()
+    pres.Tags = _Tags()
+    pressed: list[str] = []
+
+    def execute_mso(name):
+        pressed.append(name)
+        if undo_works:
+            pres.Tags.values.clear()
+
+    other = SimpleNamespace(FullName="C:\\decks\\Other.pptx")
+    pres.Application = SimpleNamespace(
+        Presentations=_Collection([pres]),
+        StartNewUndoEntry=lambda: pressed.append("start"),
+        CommandBars=SimpleNamespace(ExecuteMso=execute_mso),
+        ActivePresentation=pres if active else other,
+    )
+    pres.Windows = _Collection([SimpleNamespace(Activate=lambda: None)] * windows)
+    return pres, pressed
 
 
 # -- the op table ----------------------------------------------------------------
@@ -159,6 +198,71 @@ def test_a_failure_reports_the_ops_already_applied(calls):
     assert d["failure"]["index"] == 2
     assert d["applied"] == [0, 1]
     assert d["rolled_back"] is False
+
+
+_FAILING_BATCH = [
+    {"op": "set_notes", "slide": 1, "notes": "a"},
+    {"op": "set_text", "slide": 1, "shape": 1, "text": "ok"},
+    {"op": "set_text", "slide": 1, "shape": 2, "text": "fail"},
+]
+
+
+def test_a_successful_batch_is_one_undo_entry(calls):
+    pres, pressed = _undoable_deck()
+    out = run_batch(pres, [{"op": "set_text", "slide": 1, "shape": 2, "text": "Hello"}])
+    assert out["ok"] is True
+    assert pressed == ["start"]  # entry opened, Undo never pressed
+    assert pres.Tags.log == [("add", "OFFICE_MCP_BATCH"), ("delete", "OFFICE_MCP_BATCH")]
+
+
+def test_a_failed_batch_is_undone(calls):
+    pres, pressed = _undoable_deck()
+    with pytest.raises(PptOpError) as info:
+        run_batch(pres, _FAILING_BATCH)
+    d = info.value.details
+    assert pressed == ["start", "Undo"]
+    assert d["rolled_back"] is True
+    assert d["applied"] == []
+    assert d["ops_run"] == 2
+    assert "rollback_error" not in d
+
+
+@pytest.mark.parametrize(
+    ("deck_kwargs", "reason"),
+    [
+        ({"windows": 0}, "no window"),
+        ({"active": False}, "another presentation is active"),
+        ({"undo_works": False}, "marker is still there"),
+    ],
+)
+def test_when_undo_cant_run_the_applied_ops_are_reported(calls, deck_kwargs, reason):
+    pres, _ = _undoable_deck(**deck_kwargs)
+    with pytest.raises(PptOpError) as info:
+        run_batch(pres, _FAILING_BATCH)
+    d = info.value.details
+    assert d["rolled_back"] is False
+    assert d["applied"] == [0, 1]
+    assert reason in d["rollback_error"]
+    assert pres.Tags("OFFICE_MCP_BATCH") == ""  # marker cleaned up
+
+
+def test_undo_that_leaves_a_different_layout_is_not_trusted(calls, monkeypatch):
+    pres, _ = _undoable_deck()
+    layouts = iter([[(256, 2), (257, 1)], [(256, 3), (257, 1)]])
+    monkeypatch.setattr(dispatch, "_layout", lambda p: next(layouts))
+    with pytest.raises(PptOpError) as info:
+        run_batch(pres, _FAILING_BATCH)
+    assert info.value.details["rolled_back"] is False
+    assert "don't match" in info.value.details["rollback_error"]
+
+
+def test_rolled_back_batch_hint_says_to_resend_it(monkeypatch, calls):
+    pres, _ = _undoable_deck()
+    monkeypatch.setattr(service, "find_presentation", lambda name=None: pres)
+    result = _call("ppt_exec", {"ops": _FAILING_BATCH})
+    err = json.loads(result.content[0].text)["error"]
+    assert err["rolled_back"] is True
+    assert "send the batch again" in err["hint"]
 
 
 def test_picture_paths_are_screened_before_anything_runs(calls):

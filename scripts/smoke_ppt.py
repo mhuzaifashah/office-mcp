@@ -154,16 +154,45 @@ try:
         lambda: s.exec([{"op": "set_text", "slide": 2, "shape": 9999, "text": "x"}]),
         expect_error=True,
     )
-    step(
-        "failure part-way reports applied (expected ERR)",
+    before = {
+        "slides": s.read("slides"),
+        "notes": s.read("notes", slide=1),
+        "slide2": s.read("slide", slide=2),
+    }
+    err = step(
+        "failure part-way undoes the whole batch (expected ERR)",
         lambda: s.exec(
             [
-                {"op": "set_notes", "slide": 1, "notes": "applied"},
+                {"op": "set_notes", "slide": 1, "notes": "should be undone"},
+                {"op": "add_slide", "layout": "blank"},
+                {
+                    "op": "add_text_box",
+                    "slide": 2,
+                    "left": 10,
+                    "top": 10,
+                    "width": 100,
+                    "height": 30,
+                    "text": "should be undone",
+                },
                 {"op": "format_paragraph", "slide": 2, "shape": box, "indent_level": 9},
             ]
         ),
         expect_error=True,
     )
+    if "'rolled_back': True" not in str(err):
+        failures.append("rollback reported")
+
+    def unchanged():
+        after = {
+            "slides": s.read("slides"),
+            "notes": s.read("notes", slide=1),
+            "slide2": s.read("slide", slide=2),
+        }
+        if after != before:
+            raise AssertionError(f"deck changed: {before} -> {after}")
+        return "deck matches the state before the failed batch"
+
+    step("rollback restored notes, slides and shapes", unchanged)
 
     def snap():
         shots, total = s.snapshot(slides="1-2", max_dim=1200)

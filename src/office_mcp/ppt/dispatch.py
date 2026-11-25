@@ -5,17 +5,24 @@ fields come from that method's signature, with the parameter names agents see
 shortened (`slide_index` -> `slide`, `shape_id` -> `shape`, ...), so the op
 table can't drift from the controller.
 
-PowerPoint has no way to roll back automation reliably, so a batch:
+A batch:
 
 1. checks every op before any runs: name, fields, allowed values, and that the
    slides and shapes it names exist (unless an earlier op in the batch adds
    slides or shapes);
-2. on a failure part-way, stops and reports which ops already applied.
+2. runs the ops as one PowerPoint undo entry (`StartNewUndoEntry`), opened by a
+   marker tag on the presentation, so one Undo reverses the whole batch;
+3. on a failure part-way, presses Undo once (`ExecuteMso("Undo")`, the ribbon
+   button: PowerPoint has no Undo method) and checks the result: the marker
+   must be gone and the slides and shapes must match the state before the
+   batch. If the presentation has no window, or the check fails, it reports
+   which ops stayed applied instead.
 """
 
 from __future__ import annotations
 
 import inspect
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -223,14 +230,86 @@ def validate_ops(ops: list[Any]) -> list[dict[str, Any]]:
     return warnings
 
 
-def _bad(index: int, op: Any, message: str, *, applied: list[int] | None = None) -> PptOpError:
-    return PptOpError(
-        f"op {index}: {message}",
-        failure={"index": index, "op": op, "error": message},
-        ops_run=len(applied or []),
-        rolled_back=False,
-        applied=applied or [],
-    )
+def _bad(
+    index: int,
+    op: Any,
+    message: str,
+    *,
+    applied: list[int] | None = None,
+    rolled_back: bool = False,
+    rollback_error: str | None = None,
+) -> PptOpError:
+    details: dict[str, Any] = {
+        "failure": {"index": index, "op": op, "error": message},
+        "ops_run": len(applied or []),
+        "rolled_back": rolled_back,
+        "applied": [] if rolled_back else (applied or []),
+    }
+    if rollback_error:
+        details["rollback_error"] = rollback_error
+    return PptOpError(f"op {index}: {message}", **details)
+
+
+# -- rollback through PowerPoint's own undo --------------------------------------
+
+_MARKER = "OFFICE_MCP_BATCH"
+
+
+def _layout(pres: Any) -> list[tuple[int, int]]:
+    """(SlideID, shape count) per slide: cheap to read, and any added, deleted,
+    moved or re-shaped slide changes it."""
+    slides = pres.Slides
+    return [
+        (int(slides(i).SlideID), int(slides(i).Shapes.Count))
+        for i in range(1, int(slides.Count) + 1)
+    ]
+
+
+def _begin_undo_entry(pres: Any) -> str | None:
+    """Start the batch's undo entry with a marker tag; None if PowerPoint can't."""
+    token = f"{id(pres):x}-{time.monotonic_ns():x}"
+    try:
+        pres.Application.StartNewUndoEntry()
+        pres.Tags.Add(_MARKER, token)
+    except Exception:  # noqa: BLE001 - PowerPoint 2007, or a protected presentation
+        return None
+    return token
+
+
+def _end_undo_entry(pres: Any) -> None:
+    # Joins the batch's undo entry, so one Ctrl+Z still reverses the whole batch.
+    try:
+        pres.Tags.Delete(_MARKER)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _undo_batch(pres: Any, token: str | None, before: list[tuple[int, int]]) -> str | None:
+    """Undo the batch's entry. None on success, else why the batch stays applied."""
+    if token is None:
+        return "this PowerPoint can't group automation into one undo entry"
+    app = pres.Application
+    try:
+        if int(pres.Windows.Count) < 1:
+            return "the presentation has no window, so PowerPoint's Undo can't reach it"
+        pres.Windows(1).Activate()
+        if str(app.ActivePresentation.FullName) != str(pres.FullName):
+            return "another presentation is active, so Undo was not pressed"
+        if str(pres.Tags(_MARKER)) != token:
+            return "the batch's undo entry was not found"
+        app.CommandBars.ExecuteMso("Undo")
+    except Exception as exc:  # noqa: BLE001
+        return f"Undo failed: {com_message(exc) if _is_com_error(exc) else exc}"
+    try:
+        marker = str(pres.Tags(_MARKER))
+        layout = _layout(pres)
+    except Exception as exc:  # noqa: BLE001
+        return f"couldn't check the presentation after Undo: {exc}"
+    if marker:
+        return "Undo didn't reverse the batch (its marker is still there)"
+    if layout != before:
+        return "after Undo the slides and shapes don't match the state before the batch"
+    return None
 
 
 def _shape_ids(slide: Any) -> set[int]:
@@ -304,15 +383,27 @@ def run_batch(
                     raise
     _precheck(pres, ops)
     ctrl = controller_for(pres)
+    before = _layout(pres)
+    token = _begin_undo_entry(pres)
     outputs: list[dict[str, Any]] = []
     for i, op in enumerate(ops):
         spec = OPS[op["op"]]
         kwargs = {spec.params[k]: v for k, v in op.items() if k in spec.params}
         try:
             result = _strip(getattr(ctrl, spec.method)(**kwargs))
-        except Exception as exc:  # noqa: BLE001 - reported with what already applied
+        except Exception as exc:  # noqa: BLE001 - rolled back, or reported as applied
             message = com_message(exc) if _is_com_error(exc) else str(exc)
-            err = _bad(i, op, message, applied=list(range(i)))
+            problem = _undo_batch(pres, token, before)
+            if problem is not None and token is not None:
+                _end_undo_entry(pres)  # don't leave the marker behind
+            err = _bad(
+                i,
+                op,
+                message,
+                applied=list(range(i)),
+                rolled_back=problem is None,
+                rollback_error=problem if i else None,
+            )
             raise err from exc
         if result:
             outputs.append(
@@ -323,6 +414,8 @@ def run_batch(
                     "result": result,
                 }
             )
+    if token is not None:
+        _end_undo_entry(pres)
     out: dict[str, Any] = {"ok": True, "ops_run": len(ops)}
     if outputs:
         out["outputs"] = outputs

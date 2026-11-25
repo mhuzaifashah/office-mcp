@@ -360,8 +360,10 @@ slides with each shape outlined and labelled with its id, which is how the
 agent finds what to edit. The ops are in `ppt_read(command="guide")`.
 
 Every op in a batch is checked before any runs (including that the slides and
-shapes it names exist). PowerPoint can't roll automation back, so if an op
-fails part-way, the ones before it stay and the error lists them.
+shapes it names exist). Each call is one undo step in PowerPoint: if an op
+fails part-way, the whole batch is undone, and after a successful call one
+Ctrl+Z steps back through it. Undo needs the presentation's window; without
+one, the ops before the failure stay and the error lists them.
 
 ## Configuration
 
@@ -385,8 +387,8 @@ Directory lists in variables are separated by `;`.
 
 - **Your documents stay yours.** The server edits the open document in place
   and never saves on its own. In Word every call is one undo step, so you can
-  step back through what the agent did with Ctrl+Z. Excel has no undo for
-  automated edits, and PowerPoint can't roll a failed batch back; see
+  step back through what the agent did with Ctrl+Z, and PowerPoint works the
+  same way. Excel has no undo for automated edits; see
   [Excel (preview)](#excel-preview) and [PowerPoint (preview)](#powerpoint-preview).
 - **No file writes unless you allow a folder.** Saves and PDF exports outside
   `--save-dir` folders are refused.
